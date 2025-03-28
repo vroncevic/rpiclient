@@ -77,7 +77,7 @@ ExitDialog *new_exit_dialog(GtkWidget *parent)
         NULL
     );
 #else
-    #error "Supported GTK+ version: gtk+-3.0 gtk+-4.0!"
+    #error GTK_SUPPORTED_VERSION
 #endif
 
     if (!GTK_IS_DIALOG(instance->dialog))
@@ -130,7 +130,7 @@ gint show_exit_dialog(ExitDialog *instance)
             gtk_widget_show_all(GTK_WIDGET(instance->dialog));
             gint result = gtk_dialog_run(GTK_DIALOG(instance->dialog));
 #else
-    #error "Supported GTK+ version: gtk+-3.0 gtk+-4.0!"
+    #error GTK_SUPPORTED_VERSION
 #endif
 
             if (result == GTK_RESPONSE_ACCEPT)

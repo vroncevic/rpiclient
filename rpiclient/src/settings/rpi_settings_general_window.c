@@ -322,7 +322,7 @@ void show_settings_general_window(SettingsGeneralWindow *instance)
             gtk_widget_show_all(GTK_WIDGET(instance->window));
         }
 #else
-    #error "Supported GTK+ version: gtk+-3.0 gtk+-4.0!"
+    #error GTK_SUPPORTED_VERSION
 #endif
     }
 }
