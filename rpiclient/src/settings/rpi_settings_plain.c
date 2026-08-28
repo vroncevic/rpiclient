@@ -1,7 +1,7 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*-  */
 /*
  * rpi_settings_plain.c
- * Copyright (C) 2016 - 2025 Vladimir Roncevic <elektron.ronca@gmail.com>
+ * Copyright (C) 2016 - 2026 Vladimir Roncevic <elektron.ronca@gmail.com>
  *
  * rpiclient-gtk is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -55,11 +55,6 @@ static const gchar* DEFAULT_EXIT_PARAMETER_SETTINGS_PLAIN = "true";
 static const gchar* READ_MODE_SETTINGS_PLAIN = "rb";
 static const gchar* WRITE_MODE_SETTINGS_PLAIN = "wb";
 
-//////////////////////////////////////////////////////////////////////////////
-/// @brief Configuration file complex structure
-///   name - File name (*.config file name)
-///   mode - File mode (rb | wb mode)
-///   content - Default content for file
 typedef struct
 {
     gchar* name;
@@ -70,370 +65,133 @@ typedef struct
 static FILE* rpi_open_settings_plain_file(const ConfigFile* config);
 static void rpi_close_settings_plain_file(const ConfigFile* config, FILE* config_file);
 static void rpi_free_settings_plain_file(ConfigFile* config);
+static gchar* rpi_read_plain_file_helper(const gchar* name, const gchar* default_val);
+static guint rpi_write_plain_file_helper(const gchar* name, const gchar* param, const gchar* default_val);
 
-gchar* rpi_read_prompt_settings_plain_file(void)
+static gchar* rpi_read_plain_file_helper(const gchar* name, const gchar* default_val)
 {
-    ConfigFile prompt_setup =
+    ConfigFile setup =
     {
-        .name = g_strdup(PROMPT_FILE_NAME_SETTINGS_PLAIN),
+        .name = g_strdup(name),
         .mode = g_strdup(READ_MODE_SETTINGS_PLAIN),
-        .content = g_strdup(DEFAULT_PROMPT_PARAMETER_SETTINGS_PLAIN)
+        .content = g_strdup(default_val)
     };
 
-    gchar* prompt_config = NULL;
-    FILE* config_file = rpi_open_settings_plain_file(&prompt_setup);
+    gchar* config_val = NULL;
+    FILE* config_file = rpi_open_settings_plain_file(&setup);
 
     if (config_file)
     {
-        prompt_config = g_malloc(17 * sizeof(gchar));
-
-        if (!prompt_config)
+        config_val = g_malloc(64 * sizeof(gchar));
+        if (!config_val)
         {
             g_critical(FAILED_FILE_READ_SETTINGS_PLAIN);
-            rpi_close_settings_plain_file(&prompt_setup, config_file);
-            config_file = NULL;
-            rpi_free_settings_plain_file(&prompt_setup);
+            rpi_close_settings_plain_file(&setup, config_file);
+            rpi_free_settings_plain_file(&setup);
             return NULL;
         }
 
-        if (fscanf(config_file, "%16s", prompt_config) != 1)
+        if (fscanf(config_file, "%63s", config_val) != 1)
         {
             g_critical(FAILED_FILE_READ_SETTINGS_PLAIN);
-            g_free(prompt_config);
-            prompt_config = NULL;
-            rpi_close_settings_plain_file(&prompt_setup, config_file);
-            config_file = NULL;
-            rpi_free_settings_plain_file(&prompt_setup);
+            g_free(config_val);
+            config_val = NULL;
+            rpi_close_settings_plain_file(&setup, config_file);
+            rpi_free_settings_plain_file(&setup);
             return NULL;
         }
 
 #if RPI_VERBOSE == 1
-        g_debug(READ_FILE_PARAMETER_SETTINGS_PLAIN, PROMPT_FILE_NAME_SETTINGS_PLAIN, prompt_config);
+        g_debug(READ_FILE_PARAMETER_SETTINGS_PLAIN, name, config_val);
 #endif
 
-        rpi_close_settings_plain_file(&prompt_setup, config_file);
-        config_file = NULL;
+        rpi_close_settings_plain_file(&setup, config_file);
     }
 
-    rpi_free_settings_plain_file(&prompt_setup);
-    return prompt_config;
+    rpi_free_settings_plain_file(&setup);
+    return config_val;
+}
+
+static guint rpi_write_plain_file_helper(const gchar* name, const gchar* param, const gchar* default_val)
+{
+    if (!param)
+    {
+        g_critical(MISSING_PARAMETER_SETTINGS_PLAIN);
+        return FAILED_SETTINGS_PLAIN;
+    }
+
+    ConfigFile setup =
+    {
+        .name = g_strdup(name),
+        .mode = g_strdup(WRITE_MODE_SETTINGS_PLAIN),
+        .content = g_strdup(default_val)
+    };
+
+    FILE* config_file = rpi_open_settings_plain_file(&setup);
+    if (!config_file)
+    {
+        rpi_free_settings_plain_file(&setup);
+        return FAILED_SETTINGS_PLAIN;
+    }
+
+    gint status_put = fputs(param, config_file);
+    gint status_flash = fflush(config_file);
+
+    if (status_put < 0 || status_flash < 0)
+    {
+        g_critical(FAILED_FILE_WRITE_SETTINGS_PLAIN);
+        rpi_close_settings_plain_file(&setup, config_file);
+        rpi_free_settings_plain_file(&setup);
+        return FAILED_SETTINGS_PLAIN;
+    }
+
+#if RPI_VERBOSE == 1
+    g_debug(WRITE_FILE_PARAMETER_SETTINGS_PLAIN, name, param);
+#endif
+
+    rpi_close_settings_plain_file(&setup, config_file);
+    rpi_free_settings_plain_file(&setup);
+    return SUCCESS_SETTINGS_PLAIN;
+}
+
+gchar* rpi_read_prompt_settings_plain_file(void)
+{
+    return rpi_read_plain_file_helper(PROMPT_FILE_NAME_SETTINGS_PLAIN, DEFAULT_PROMPT_PARAMETER_SETTINGS_PLAIN);
 }
 
 guint rpi_write_prompt_settings_plain_file(const gchar* prompt_config)
 {
-    if (!prompt_config)
-    {
-        g_critical(MISSING_PARAMETER_SETTINGS_PLAIN);
-        return FAILED_SETTINGS_PLAIN;
-    }
-
-    ConfigFile prompt_setup =
-    {
-        .name = g_strdup(PROMPT_FILE_NAME_SETTINGS_PLAIN),
-        .mode = g_strdup(WRITE_MODE_SETTINGS_PLAIN),
-        .content = g_strdup(DEFAULT_PROMPT_PARAMETER_SETTINGS_PLAIN)
-    };
-    FILE* config_file = rpi_open_settings_plain_file(&prompt_setup);
-
-    if (!config_file)
-    {
-        rpi_free_settings_plain_file(&prompt_setup);
-        return FAILED_SETTINGS_PLAIN;
-    }
-
-    gint status_put = fputs(prompt_config, config_file);
-    gint status_flash = fflush(config_file);
-
-    if (status_put < 0 || status_flash < 0)
-    {
-        g_critical(FAILED_FILE_WRITE_SETTINGS_PLAIN);
-        rpi_close_settings_plain_file(&prompt_setup, config_file);
-        config_file = NULL;
-        rpi_free_settings_plain_file(&prompt_setup);
-        return FAILED_SETTINGS_PLAIN;
-    }
-
-#if RPI_VERBOSE == 1
-    g_debug(WRITE_FILE_PARAMETER_SETTINGS_PLAIN, PROMPT_FILE_NAME_SETTINGS_PLAIN, prompt_config);
-#endif
-
-    rpi_close_settings_plain_file(&prompt_setup, config_file);
-    config_file = NULL;
-    rpi_free_settings_plain_file(&prompt_setup);
-    return SUCCESS_SETTINGS_PLAIN;
+    return rpi_write_plain_file_helper(PROMPT_FILE_NAME_SETTINGS_PLAIN, prompt_config, DEFAULT_PROMPT_PARAMETER_SETTINGS_PLAIN);
 }
 
 gchar* rpi_read_address_settings_plain_file(void)
 {
-    gchar* address_config = NULL;
-    ConfigFile address_setup =
-    {
-        .name = g_strdup(SERVER_ADDRESS_FILE_NAME_SETTINGS_PLAIN),
-        .mode = g_strdup(READ_MODE_SETTINGS_PLAIN),
-        .content = g_strdup(DEFAULT_SERVER_ADDRESS_PARAMETER_SETTINGS_PLAIN)
-    };
-    FILE* config_file = rpi_open_settings_plain_file(&address_setup);
-
-    if (config_file)
-    {
-        address_config = g_malloc(17 * sizeof(gchar));
-
-        if (!address_config)
-        {
-            g_critical(FAILED_FILE_READ_SETTINGS_PLAIN);
-            rpi_close_settings_plain_file(&address_setup, config_file);
-            config_file = NULL;
-            rpi_free_settings_plain_file(&address_setup);
-            return NULL;
-        }
-
-        if (fscanf(config_file, "%16s", address_config) != 1)
-        {
-            g_critical(FAILED_FILE_READ_SETTINGS_PLAIN);
-            g_free(address_config);
-            address_config = NULL;
-            rpi_close_settings_plain_file(&address_setup, config_file);
-            config_file = NULL;
-            rpi_free_settings_plain_file(&address_setup);
-            return NULL;
-        }
-
-#if RPI_VERBOSE == 1
-        g_debug(READ_FILE_PARAMETER_SETTINGS_PLAIN, SERVER_ADDRESS_FILE_NAME_SETTINGS_PLAIN, address_config);
-#endif
-
-        rpi_close_settings_plain_file(&address_setup, config_file);
-        config_file = NULL;
-    }
-
-    rpi_free_settings_plain_file(&address_setup);
-    return address_config;
+    return rpi_read_plain_file_helper(SERVER_ADDRESS_FILE_NAME_SETTINGS_PLAIN, DEFAULT_SERVER_ADDRESS_PARAMETER_SETTINGS_PLAIN);
 }
 
 guint rpi_write_address_settings_plain_file(const gchar* address_config)
 {
-    if (!address_config)
-    {
-        g_critical(MISSING_PARAMETER_SETTINGS_PLAIN);
-        return FAILED_SETTINGS_PLAIN;
-    }
-
-    ConfigFile address_setup =
-    {
-        .name = g_strdup(SERVER_ADDRESS_FILE_NAME_SETTINGS_PLAIN),
-        .mode = g_strdup(WRITE_MODE_SETTINGS_PLAIN),
-        .content = g_strdup(DEFAULT_SERVER_ADDRESS_PARAMETER_SETTINGS_PLAIN)
-    };
-    FILE* config_file = rpi_open_settings_plain_file(&address_setup);
-
-    if (!config_file)
-    {
-        rpi_free_settings_plain_file(&address_setup);
-        return FAILED_SETTINGS_PLAIN;
-    }
-
-    gint status_put = fputs(address_config, config_file);
-    gint status_flash = fflush(config_file);
-
-    if (status_put < 0 || status_flash < 0)
-    {
-        g_critical(FAILED_FILE_WRITE_SETTINGS_PLAIN);
-        rpi_close_settings_plain_file(&address_setup, config_file);
-        config_file = NULL;
-        rpi_free_settings_plain_file(&address_setup);
-        return FAILED_SETTINGS_PLAIN;
-    }
-
-#if RPI_VERBOSE == 1
-    g_debug(WRITE_FILE_PARAMETER_SETTINGS_PLAIN, SERVER_ADDRESS_FILE_NAME_SETTINGS_PLAIN, address_config);
-#endif
-
-    rpi_close_settings_plain_file(&address_setup, config_file);
-    config_file = NULL;
-    rpi_free_settings_plain_file(&address_setup);
-    return SUCCESS_SETTINGS_PLAIN;
+    return rpi_write_plain_file_helper(SERVER_ADDRESS_FILE_NAME_SETTINGS_PLAIN, address_config, DEFAULT_SERVER_ADDRESS_PARAMETER_SETTINGS_PLAIN);
 }
 
 gchar* rpi_read_port_settings_plain_file(void)
 {
-    gchar* port_config = NULL;
-    ConfigFile port_setup =
-    {
-        .name = g_strdup(SERVER_PORT_FILE_NAME_SETTINGS_PLAIN),
-        .mode = g_strdup(READ_MODE_SETTINGS_PLAIN),
-        .content = g_strdup(DEFAULT_SERVER_PORT_PARAMETER_SETTINGS_PLAIN)
-    };
-    FILE* config_file = rpi_open_settings_plain_file(&port_setup);
-
-    if (config_file)
-    {
-        port_config = g_malloc(17 * sizeof(gchar));
-
-        if (!port_config)
-        {
-            g_critical(FAILED_FILE_READ_SETTINGS_PLAIN);
-            rpi_close_settings_plain_file(&port_setup, config_file);
-            config_file = NULL;
-            rpi_free_settings_plain_file(&port_setup);
-            return NULL;
-        }
-
-        if (fscanf(config_file, "%16s", port_config) != 1)
-        {
-            g_critical(FAILED_FILE_READ_SETTINGS_PLAIN);
-            g_free(port_config);
-            port_config = NULL;
-            rpi_close_settings_plain_file(&port_setup, config_file);
-            config_file = NULL;
-            rpi_free_settings_plain_file(&port_setup);
-            return NULL;
-        }
-
-#if RPI_VERBOSE == 1
-    g_debug(READ_FILE_PARAMETER_SETTINGS_PLAIN, SERVER_PORT_FILE_NAME_SETTINGS_PLAIN, port_config);
-#endif
-
-        rpi_close_settings_plain_file(&port_setup, config_file);
-        config_file = NULL;
-    }
-
-    rpi_free_settings_plain_file(&port_setup);
-    return port_config;
+    return rpi_read_plain_file_helper(SERVER_PORT_FILE_NAME_SETTINGS_PLAIN, DEFAULT_SERVER_PORT_PARAMETER_SETTINGS_PLAIN);
 }
 
 guint rpi_write_port_settings_plain_file(const gchar* port_config)
 {
-    if (!port_config)
-    {
-        g_critical(MISSING_PARAMETER_SETTINGS_PLAIN);
-        return FAILED_SETTINGS_PLAIN;
-    }
-
-    ConfigFile port_setup =
-    {
-        .name = g_strdup(SERVER_PORT_FILE_NAME_SETTINGS_PLAIN),
-        .mode = g_strdup(WRITE_MODE_SETTINGS_PLAIN),
-        .content = g_strdup(DEFAULT_SERVER_PORT_PARAMETER_SETTINGS_PLAIN)
-    };
-    FILE* config_file = rpi_open_settings_plain_file(&port_setup);
-
-    if (!config_file)
-    {
-        rpi_free_settings_plain_file(&port_setup);
-        return FAILED_SETTINGS_PLAIN;
-    }
-
-    gint status_put = fputs(port_config, config_file);
-    gint status_flash = fflush(config_file);
-
-    if (status_put < 0 || status_flash < 0)
-    {
-        g_critical(FAILED_FILE_WRITE_SETTINGS_PLAIN);
-        rpi_close_settings_plain_file(&port_setup, config_file);
-        config_file = NULL;
-        rpi_free_settings_plain_file(&port_setup);
-        return FAILED_SETTINGS_PLAIN;
-    }
-
-#if RPI_VERBOSE == 1
-    g_debug(WRITE_FILE_PARAMETER_SETTINGS_PLAIN, SERVER_PORT_FILE_NAME_SETTINGS_PLAIN, port_config);
-#endif
-
-    rpi_close_settings_plain_file(&port_setup, config_file);
-    config_file = NULL;
-    rpi_free_settings_plain_file(&port_setup);
-    return SUCCESS_SETTINGS_PLAIN;
+    return rpi_write_plain_file_helper(SERVER_PORT_FILE_NAME_SETTINGS_PLAIN, port_config, DEFAULT_SERVER_PORT_PARAMETER_SETTINGS_PLAIN);
 }
 
 gchar* rpi_read_exit_settings_plain_file(void)
 {
-    gchar* exit_config = NULL;
-    ConfigFile exit_setup =
-    {
-        .name = g_strdup(EXIT_FILE_NAME_SETTINGS_PLAIN),
-        .mode = g_strdup(READ_MODE_SETTINGS_PLAIN),
-        .content = g_strdup(DEFAULT_EXIT_PARAMETER_SETTINGS_PLAIN)
-    };
-    FILE* config_file = rpi_open_settings_plain_file(&exit_setup);
-
-    if (config_file)
-    {
-        exit_config = g_malloc(17 * sizeof(gchar));
-
-        if (!exit_config)
-        {
-            g_critical(FAILED_FILE_READ_SETTINGS_PLAIN);
-            rpi_close_settings_plain_file(&exit_setup, config_file);
-            config_file = NULL;
-            rpi_free_settings_plain_file(&exit_setup);
-            return NULL;
-        }
-
-        if (fscanf(config_file, "%16s", exit_config) != 1)
-        {
-            g_critical(FAILED_FILE_READ_SETTINGS_PLAIN);
-            g_free(exit_config);
-            exit_config = NULL;
-            rpi_close_settings_plain_file(&exit_setup, config_file);
-            config_file = NULL;
-            rpi_free_settings_plain_file(&exit_setup);
-            return NULL;
-        }
-
-#if RPI_VERBOSE == 1
-    g_debug(READ_FILE_PARAMETER_SETTINGS_PLAIN, EXIT_FILE_NAME_SETTINGS_PLAIN, exit_config);
-#endif
-
-        rpi_close_settings_plain_file(&exit_setup, config_file);
-        config_file = NULL;
-    }
-
-    rpi_free_settings_plain_file(&exit_setup);
-    return exit_config;
+    return rpi_read_plain_file_helper(EXIT_FILE_NAME_SETTINGS_PLAIN, DEFAULT_EXIT_PARAMETER_SETTINGS_PLAIN);
 }
 
 guint rpi_write_exit_settings_plain_file(const gchar* exit_config)
 {
-    if (!exit_config)
-    {
-        g_critical(MISSING_PARAMETER_SETTINGS_PLAIN);
-        return FAILED_SETTINGS_PLAIN;
-    }
-
-    ConfigFile exit_setup =
-    {
-        .name = g_strdup(EXIT_FILE_NAME_SETTINGS_PLAIN),
-        .mode = g_strdup(WRITE_MODE_SETTINGS_PLAIN),
-        .content = g_strdup(DEFAULT_EXIT_PARAMETER_SETTINGS_PLAIN)
-    };
-    FILE* config_file = rpi_open_settings_plain_file(&exit_setup);
-
-    if (!config_file)
-    {
-        rpi_free_settings_plain_file(&exit_setup);
-        return FAILED_SETTINGS_PLAIN;
-    }
-
-    gint status_put = fputs(exit_config, config_file);
-    gint status_flash = fflush(config_file);
-
-    if (status_put < 0 || status_flash < 0)
-    {
-        g_critical(FAILED_FILE_WRITE_SETTINGS_PLAIN);
-        rpi_close_settings_plain_file(&exit_setup, config_file);
-        config_file = NULL;
-        rpi_free_settings_plain_file(&exit_setup);
-        return FAILED_SETTINGS_PLAIN;
-    }
-
-#if RPI_VERBOSE == 1
-    g_debug(WRITE_FILE_PARAMETER_SETTINGS_PLAIN, EXIT_FILE_NAME_SETTINGS_PLAIN, exit_config);
-#endif
-
-    rpi_close_settings_plain_file(&exit_setup, config_file);
-    config_file = NULL;
-    rpi_free_settings_plain_file(&exit_setup);
-    return SUCCESS_SETTINGS_PLAIN;
+    return rpi_write_plain_file_helper(EXIT_FILE_NAME_SETTINGS_PLAIN, exit_config, DEFAULT_EXIT_PARAMETER_SETTINGS_PLAIN);
 }
 
 static FILE* rpi_open_settings_plain_file(const ConfigFile* config)
@@ -463,7 +221,6 @@ static FILE* rpi_open_settings_plain_file(const ConfigFile* config)
     }
 
     config_dir_path = rpi_get_config_dir();
-
     if (!config_dir_path)
     {
         g_critical(FAILED_GET_CONFIGURATION_DIR_SETTINGS_PLAIN);
@@ -475,7 +232,6 @@ static FILE* rpi_open_settings_plain_file(const ConfigFile* config)
 #endif
 
     gchar *config_file_path = rpi_get_config_file_path(config->name, config->content);
-
     if (!config_file_path)
     {
         g_critical(FAILED_FILE_PATH_SETTINGS_PLAIN);
@@ -483,12 +239,10 @@ static FILE* rpi_open_settings_plain_file(const ConfigFile* config)
     }
 
     FILE *config_file = fopen(config_file_path, config->mode);
-
     if (!config_file)
     {
         g_critical(FAILED_FILE_OPEN_SETTINGS_PLAIN);
         g_free(config_file_path);
-        config_file_path = NULL;
         return NULL;
     }
 
@@ -497,7 +251,6 @@ static FILE* rpi_open_settings_plain_file(const ConfigFile* config)
 #endif
 
     g_free(config_file_path);
-    config_file_path = NULL;
     return config_file;
 }
 
@@ -506,7 +259,6 @@ static void rpi_close_settings_plain_file(const ConfigFile* config, FILE* config
     if (config_file)
     {
         gint status = fclose(config_file);
-
         if (status != 0)
         {
             g_critical(FAILED_FILE_CLOSE_SETTINGS_PLAIN);
@@ -518,7 +270,6 @@ static void rpi_close_settings_plain_file(const ConfigFile* config, FILE* config
             g_debug(CLOSE_FILE_SETTINGS_PLAIN, config->name);
         }
 #endif
-
     }
 }
 

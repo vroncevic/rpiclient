@@ -52,6 +52,13 @@ GtkWidget* get_window_from_rpi_home(RPIHome *instance);
 RPIMenu* get_menu_bar_from_rpi_home(RPIHome *instance);
 
 //////////////////////////////////////////////////////////////////////////////
+/// @brief Updates status for a channel on home window
+/// @param instance is pointer to complex widget home
+/// @param channel_id is channel number (1-8)
+/// @param value is status percentage value (0-100)
+void rpi_home_update_channel_status(RPIHome *instance, gint channel_id, gint value);
+
+//////////////////////////////////////////////////////////////////////////////
 /// @brief Destroy home complex widget
 /// @param instance is pointer to complex widget home
 void destroy_rpi_home(RPIHome *instance);

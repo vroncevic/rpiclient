@@ -1,0 +1,51 @@
+frame {
+  margin: 4px;
+  padding: 6px;
+  border: 1px solid #383838;
+  border-radius: 6px;
+}
+
+.channel-box {
+  background-color: #1e1e1e;
+  border: 1px solid #333333;
+  border-radius: 6px;
+  margin: 2px;
+  padding: 4px;
+}
+
+scale trough {
+  background-color: #242424;
+  border: 1px solid #333333;
+  border-radius: 4px;
+}
+
+scale highlight {
+  background-color: #43a047;
+  border-radius: 4px;
+}
+
+scale slider {
+  background-color: #ffffff;
+  border: 2px solid #43a047;
+  border-radius: 50%;
+  min-width: 14px;
+  min-height: 14px;
+}
+
+checkbutton {
+  font-weight: bold;
+  color: #e0e0e0;
+}
+
+spinbutton {
+  background-color: #282828;
+  color: #ffffff;
+  border: 1px solid #484848;
+  border-radius: 5px;
+  padding: 3px;
+}
+
+label {
+  color: #e0e0e0;
+  font-weight: 500;
+}

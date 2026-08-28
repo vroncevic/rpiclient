@@ -49,6 +49,13 @@ void hide_rpi_home_frame(RPIHomeFrame *instance);
 GtkWidget* get_frame_from_rpi_home_frame(RPIHomeFrame *instance);
 
 //////////////////////////////////////////////////////////////////////////////
+/// @brief Updates status for a channel
+/// @param instance is pointer to complex widget home frame
+/// @param channel_id is channel number (1-8 or 0-7)
+/// @param value is status percentage value (0-100)
+void rpi_home_frame_update_channel_status(RPIHomeFrame *instance, gint channel_id, gint value);
+
+//////////////////////////////////////////////////////////////////////////////
 /// @brief Destroy home frame complex widget
 /// @param instance is pointer to complex widget home frame
 void destroy_rpi_home_frame(RPIHomeFrame *instance);

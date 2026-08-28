@@ -66,6 +66,12 @@ GtkWidget* get_spinner_button_from_rpi_channel_control(RPIChannelControl *instan
 GtkWidget* get_check_box_from_rpi_channel_control(RPIChannelControl *instance);
 
 //////////////////////////////////////////////////////////////////////////////
+/// @brief Gets frame from channel control complex widget
+/// @param instance is pointer to complex widget channel control
+/// @return Frame from complex widget channel control | NULL
+GtkWidget* get_frame_from_rpi_channel_control(RPIChannelControl *instance);
+
+//////////////////////////////////////////////////////////////////////////////
 /// @brief Destroy channel control complex widget
 /// @param instance is pointer to complex widget channel control
 void destroy_rpi_channel_control(RPIChannelControl *instance);

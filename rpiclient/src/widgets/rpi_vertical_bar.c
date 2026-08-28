@@ -52,36 +52,48 @@ static void gtk_vb_init(GtkVB *instance)
 
 static void gtk_vb_get_preferred_width(GtkWidget *widget, gint *minimum_width, gint *natural_width)
 {
-    *minimum_width = 80;
-    *natural_width = 80;
+    *minimum_width = 50;
+    *natural_width = 50;
 }
 
 static void gtk_vb_get_preferred_height(GtkWidget *widget, gint *minimum_height, gint *natural_height)
 {
-    *minimum_height = 150;
-    *natural_height = 150;
+    *minimum_height = 200;
+    *natural_height = 200;
 }
 
 static gboolean gtk_vb_draw(GtkWidget *widget, cairo_t *cr)
 {
-    cairo_set_source_rgb(cr, 1, 1, 1);
-    cairo_paint(cr);
+    gint width = gtk_widget_get_allocated_width(widget);
     gint height = gtk_widget_get_allocated_height(widget);
     gint pos = GTK_VB(widget)->sel;
     gint rect_count = pos / 5;
+
+    // Dark sleek container background
+    cairo_set_source_rgb(cr, 0.14, 0.14, 0.14);
+    cairo_rectangle(cr, 0, 0, width, height);
+    cairo_fill(cr);
+
+    // Subtle border
+    cairo_set_source_rgb(cr, 0.28, 0.28, 0.28);
+    cairo_set_line_width(cr, 1.0);
+    cairo_rectangle(cr, 0.5, 0.5, width - 1, height - 1);
+    cairo_stroke(cr);
 
     for (gint i = 0; i < 20; i++)
     {
         if (i < rect_count)
         {
-            cairo_set_source_rgb(cr, 0.6, 1.0, 0);
+            // Active bright green LED
+            cairo_set_source_rgb(cr, 0.35, 0.88, 0.2);
         }
         else
         {
-            cairo_set_source_rgb(cr, 0.2, 0.4, 0);
+            // Inactive dark green LED
+            cairo_set_source_rgb(cr, 0.10, 0.24, 0.10);
         }
 
-        cairo_rectangle(cr, 10, height - (i * 10) - 10, 60, 8);
+        cairo_rectangle(cr, 6, height - (i * 9) - 16, width - 12, 7);
         cairo_fill(cr);
     }
 

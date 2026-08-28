@@ -73,6 +73,7 @@ struct _SettingsGeneralWindow
 
 static void on_button_ok_clicked(GtkWidget *widget, SettingsGeneralWindow *instance);
 static void on_button_cancel_clicked(GtkWidget *widget, SettingsGeneralWindow *instance);
+static void on_window_destroy(GtkWidget *widget, gpointer data);
 
 SettingsGeneralWindow *new_settings_general_window(void)
 {
@@ -231,8 +232,8 @@ SettingsGeneralWindow *new_settings_general_window(void)
     gtk_container_add(GTK_CONTAINER(instance->hbox), GTK_WIDGET(instance->button_ok));
     gtk_container_add(GTK_CONTAINER(instance->hbox), GTK_WIDGET(instance->button_cancel));
     gtk_box_pack_start(GTK_BOX(instance->vbox), GTK_WIDGET(instance->hbox), FALSE, FALSE, 0);
-    g_signal_connect_swapped(
-        G_OBJECT(instance->window), "delete-event", G_CALLBACK(destroy_settings_general_window), instance
+    g_signal_connect(
+        G_OBJECT(instance->window), "destroy", G_CALLBACK(on_window_destroy), instance
     );
     g_signal_connect(
         G_OBJECT(instance->button_ok), "clicked", G_CALLBACK(on_button_ok_clicked), instance
@@ -361,8 +362,9 @@ static void on_button_cancel_clicked(GtkWidget *widget, SettingsGeneralWindow *i
     destroy_settings_general_window(instance);
 }
 
-void destroy_settings_general_window(SettingsGeneralWindow *instance)
+static void on_window_destroy(GtkWidget *widget, gpointer data)
 {
+    SettingsGeneralWindow *instance = (SettingsGeneralWindow *)data;
     if (instance)
     {
         if (instance->settings)
@@ -370,19 +372,17 @@ void destroy_settings_general_window(SettingsGeneralWindow *instance)
             settings_free(instance->settings);
             instance->settings = NULL;
         }
+        g_free(instance);
+    }
+}
 
+void destroy_settings_general_window(SettingsGeneralWindow *instance)
+{
+    if (instance)
+    {
         if (GTK_IS_WINDOW(instance->window))
         {
             rpi_destroy_widget_misc(GTK_WIDGET(instance->window));
-            instance->window = NULL;
         }
-
-        instance->button_cancel = NULL;
-        instance->button_ok = NULL;
-        instance->hbox = NULL;
-        instance->check_button_control_exit = NULL;
-        instance->frame_control_exit = NULL;
-        instance->grid = NULL;
-        g_free(instance);
     }
 }

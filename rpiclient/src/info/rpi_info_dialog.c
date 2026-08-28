@@ -81,10 +81,6 @@ InfoDialog *new_info_dialog(GtkWidget *parent, const gchar *msg)
         return NULL;
     }
 
-    g_signal_connect_swapped(
-        G_OBJECT(instance->dialog), "response", G_CALLBACK(destroy_info_dialog), instance
-    );
-
     return instance;
 }
 
@@ -98,15 +94,16 @@ void show_info_dialog(InfoDialog *instance)
         if (is_message_dialog && !is_message_dialog_visible)
         {
             rpi_set_visible_widget_misc(GTK_WIDGET(instance->dialog), !is_message_dialog_visible);
+            gint result = GTK_RESPONSE_NONE;
 #if GTK_MAJOR_VERSION == 4
             // TODO: prepare run info dialog for gtk+-4.0
 #elif GTK_MAJOR_VERSION == 3
-            gint result = gtk_dialog_run(GTK_DIALOG(instance->dialog));
+            result = gtk_dialog_run(GTK_DIALOG(instance->dialog));
 #else
     #error GTK_SUPPORTED_VERSION
 #endif
 
-            if (result == GTK_RESPONSE_CLOSE)
+            if (result == GTK_RESPONSE_CLOSE || result == GTK_RESPONSE_DELETE_EVENT)
             {
                 hide_info_dialog(instance);
 #if RPI_VERBOSE == 1

@@ -1,22 +1,77 @@
-__pycache__/
-*.py[cod]
-*.d
-*.slo
-*.lo
+# Compiled Object & Binary Files
 *.o
 *.obj
-*.gch
-*.pch
-*.so
-*.dylib
-*.dll
-*.mod
-*.smod
-*.lai
+*.lo
 *.la
+*.lai
 *.a
 *.lib
+*.so
+*.so.*
+*.dylib
+*.dll
 *.exe
 *.out
 *.app
+/rpiclient/src/rpiclient
+/rpiclient/rpiclient
 
+# Build & Dependency Directories
+**/.deps/
+**/.dirstamp
+**/.libs/
+autom4te.cache/
+docs/build/
+**/docs/build/
+
+# Autotools Generated Files
+Makefile
+Makefile.in
+**/Makefile
+**/Makefile.in
+aclocal.m4
+compile
+config.guess
+config.h
+config.h.in
+config.log
+config.status
+config.sub
+configure
+depcomp
+install-sh
+intltool-extract
+intltool-extract.in
+intltool-merge
+intltool-merge.in
+intltool-update
+intltool-update.in
+libtool
+ltmain.sh
+missing
+stamp-h1
+m4/
+
+# Localization & Resource Generated Artifacts
+**/po/Makefile
+**/po/Makefile.in
+**/po/stamp-it
+**/po/*.gmo
+**/rc/Makefile
+**/rc/Makefile.in
+
+# GResource Generated Code
+src/resource/rpi_resources.c
+**/src/resource/rpi_resources.c
+
+# Python Caches
+__pycache__/
+**/*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Editor & IDE Temporary Files
+.idea/
+.clangd/
+*.swp
+*~

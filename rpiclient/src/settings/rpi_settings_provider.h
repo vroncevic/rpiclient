@@ -1,7 +1,7 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*-  */
 /*
- * rpi_server_parameters.h
- * Copyright (C) 2016 - 2025 Vladimir Roncevic <elektron.ronca@gmail.com>
+ * rpi_settings_provider.h
+ * Copyright (C) 2016 - 2026 Vladimir Roncevic <elektron.ronca@gmail.com>
  *
  * rpiclient-gtk is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -18,21 +18,15 @@
  */
 #pragma once
 
-#include <netdb.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include <glib.h>
 
-// TODO: Move to variables
-#define RPIC_PORT_NUMBER_SERVER "8000"
-#define RPIC_SERVER_ADDRESS "127.0.0.1"
-
-// TODO: Perform encapsulation
-typedef struct
-{
-    struct sockaddr_in serv_addr;
-    struct hostent *server;
-    int portno;
-} ServerParameters;
-
-extern ServerParameters *server_parameters;
+typedef struct {
+    gchar* (*read_prompt)(void);
+    gchar* (*read_address)(void);
+    gchar* (*read_port)(void);
+    gchar* (*read_exit)(void);
+    guint (*write_prompt)(const gchar*);
+    guint (*write_address)(const gchar*);
+    guint (*write_port)(const gchar*);
+    guint (*write_exit)(const gchar*);
+} SettingsStorageProvider;

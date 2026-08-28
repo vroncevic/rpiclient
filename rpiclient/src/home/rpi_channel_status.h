@@ -59,6 +59,18 @@ GtkWidget* get_label_from_rpi_channel_status(RPIChannelStatus *instance);
 GtkVB* get_vertical_bar_from_rpi_channel_status(RPIChannelStatus *instance);
 
 //////////////////////////////////////////////////////////////////////////////
+/// @brief Gets frame from channel status complex widget
+/// @param instance is pointer to complex widget channel status
+/// @return Frame from complex widget channel status | NULL
+GtkWidget* get_frame_from_rpi_channel_status(RPIChannelStatus *instance);
+
+//////////////////////////////////////////////////////////////////////////////
+/// @brief Sets value for channel status complex widget
+/// @param instance is pointer to complex widget channel status
+/// @param value is status percentage value (0-100)
+void set_value_to_rpi_channel_status(RPIChannelStatus *instance, gint value);
+
+//////////////////////////////////////////////////////////////////////////////
 /// @brief Destroy channel status complex widget
 /// @param instance is pointer to complex widget channel status
 void destroy_rpi_channel_status(RPIChannelStatus *instance);

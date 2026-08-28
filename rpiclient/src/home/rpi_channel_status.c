@@ -28,10 +28,34 @@
 ///   status_channel_vertical_bar - Custom vertical bar widget for channel status
 struct _RPIChannelStatus
 {
+    GtkWidget *frame;
     GtkWidget *activate_channel_check_box;
     GtkWidget *status_channel_label;
     GtkVB *status_channel_vertical_bar;
+    gint channel_id;
+    gint current_value;
 };
+
+static void on_status_check_box_toggled(GtkToggleButton *toggle_button, gpointer user_data);
+
+static void on_status_check_box_toggled(GtkToggleButton *toggle_button, gpointer user_data)
+{
+    RPIChannelStatus *instance = (RPIChannelStatus *)user_data;
+    if (instance)
+    {
+        gboolean is_active = gtk_toggle_button_get_active(toggle_button);
+        gtk_widget_set_sensitive(GTK_WIDGET(instance->status_channel_vertical_bar), is_active);
+        gtk_widget_set_sensitive(instance->status_channel_label, is_active);
+        if (!is_active)
+        {
+            gtk_vb_set_state(instance->status_channel_vertical_bar, 0);
+        }
+        else
+        {
+            gtk_vb_set_state(instance->status_channel_vertical_bar, instance->current_value);
+        }
+    }
+}
 
 RPIChannelStatus *new_rpi_channel_status(gint channel_id)
 {
@@ -43,7 +67,19 @@ RPIChannelStatus *new_rpi_channel_status(gint channel_id)
         return NULL;
     }
 
-    gchar status_checkbox[10] = {0};
+    instance->channel_id = channel_id;
+    instance->current_value = 0;
+
+    instance->frame = gtk_frame_new(NULL);
+    if (!GTK_IS_FRAME(instance->frame))
+    {
+        g_critical(FAILED_MALLOC_CHANNEL_STATUS);
+        g_free(instance);
+        return NULL;
+    }
+    gtk_style_context_add_class(gtk_widget_get_style_context(instance->frame), "channel-box");
+
+    gchar status_checkbox[24] = {0};
     g_snprintf(status_checkbox, sizeof(status_checkbox), "Channel %d", channel_id);
     instance->activate_channel_check_box = gtk_check_button_new_with_label(status_checkbox);
 
@@ -54,7 +90,7 @@ RPIChannelStatus *new_rpi_channel_status(gint channel_id)
         return NULL;
     }
 
-    gchar tooltip_text_checkbox[19] = {0};
+    gchar tooltip_text_checkbox[32] = {0};
     g_snprintf(tooltip_text_checkbox, sizeof(tooltip_text_checkbox), "Activate Channel %d", channel_id);
     gtk_widget_set_tooltip_text(instance->activate_channel_check_box, tooltip_text_checkbox);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(instance->activate_channel_check_box), FALSE);
@@ -67,11 +103,11 @@ RPIChannelStatus *new_rpi_channel_status(gint channel_id)
         return NULL;
     }
 
-    gchar tooltip_text_vbar[10] = {0};
+    gchar tooltip_text_vbar[24] = {0};
     g_snprintf(tooltip_text_vbar, sizeof(tooltip_text_vbar), "Channel %d", channel_id);
     gtk_widget_set_tooltip_text(GTK_WIDGET(instance->status_channel_vertical_bar), tooltip_text_vbar);
-    gchar status_label[16] = {0};
-    g_snprintf(status_label, sizeof(status_label), "CH%d Status: 0", channel_id);
+    gchar status_label[32] = {0};
+    g_snprintf(status_label, sizeof(status_label), "Channel %d: 0", channel_id);
     instance->status_channel_label = gtk_label_new(status_label);
 
     if (!GTK_IS_LABEL(instance->status_channel_label))
@@ -81,66 +117,45 @@ RPIChannelStatus *new_rpi_channel_status(gint channel_id)
         return NULL;
     }
 
+    gtk_widget_set_sensitive(GTK_WIDGET(instance->status_channel_vertical_bar), FALSE);
+    gtk_widget_set_sensitive(instance->status_channel_label, FALSE);
+
+    g_signal_connect(
+        G_OBJECT(instance->activate_channel_check_box),
+        "toggled",
+        G_CALLBACK(on_status_check_box_toggled),
+        instance
+    );
+
+    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+    gtk_container_set_border_width(GTK_CONTAINER(vbox), 4);
+    gtk_container_add(GTK_CONTAINER(instance->frame), vbox);
+
+    gtk_widget_set_halign(GTK_WIDGET(instance->status_channel_vertical_bar), GTK_ALIGN_CENTER);
+    gtk_box_pack_start(GTK_BOX(vbox), GTK_WIDGET(instance->status_channel_vertical_bar), FALSE, FALSE, 0);
+
+    gtk_widget_set_halign(instance->activate_channel_check_box, GTK_ALIGN_CENTER);
+    gtk_box_pack_start(GTK_BOX(vbox), instance->activate_channel_check_box, FALSE, FALSE, 0);
+
+    gtk_widget_set_halign(instance->status_channel_label, GTK_ALIGN_CENTER);
+    gtk_box_pack_start(GTK_BOX(vbox), instance->status_channel_label, FALSE, FALSE, 0);
+
     return instance;
 }
 
 void show_rpi_channel_status(RPIChannelStatus *instance)
 {
-    if (instance)
+    if (instance && GTK_IS_FRAME(instance->frame))
     {
-        gboolean is_check_button = GTK_IS_CHECK_BUTTON(instance->activate_channel_check_box);
-        gboolean is_check_button_visible = rpi_is_widget_visible_misc(GTK_WIDGET(instance->activate_channel_check_box));
-
-        if (is_check_button && !is_check_button_visible)
-        {
-            rpi_set_visible_widget_misc(GTK_WIDGET(instance->activate_channel_check_box), !is_check_button_visible);
-        }
-
-        gboolean is_check_label = GTK_IS_LABEL(instance->status_channel_label);
-        gboolean is_check_label_visible = rpi_is_widget_visible_misc(GTK_WIDGET(instance->status_channel_label));
-
-        if (is_check_label && !is_check_label_visible)
-        {
-            rpi_set_visible_widget_misc(GTK_WIDGET(instance->status_channel_label), !is_check_label_visible);
-        }
-
-        gboolean is_verical_bar = GTK_IS_VB(instance->status_channel_vertical_bar);
-        gboolean is_verical_bar_visible = rpi_is_widget_visible_misc(GTK_WIDGET(instance->status_channel_vertical_bar));
-
-        if (is_verical_bar && !is_verical_bar_visible)
-        {
-            rpi_set_visible_widget_misc(GTK_WIDGET(instance->status_channel_vertical_bar), !is_verical_bar_visible);
-        }
+        gtk_widget_show_all(instance->frame);
     }
 }
 
 void hide_rpi_channel_status(RPIChannelStatus *instance)
 {
-    if (instance)
+    if (instance && GTK_IS_FRAME(instance->frame))
     {
-        gboolean is_check_button = GTK_IS_CHECK_BUTTON(instance->activate_channel_check_box);
-        gboolean is_check_button_visible = rpi_is_widget_visible_misc(GTK_WIDGET(instance->activate_channel_check_box));
-
-        if (is_check_button && is_check_button_visible)
-        {
-            rpi_set_visible_widget_misc(GTK_WIDGET(instance->activate_channel_check_box), !is_check_button_visible);
-        }
-
-        gboolean is_check_label = GTK_IS_LABEL(instance->status_channel_label);
-        gboolean is_check_label_visible = rpi_is_widget_visible_misc(GTK_WIDGET(instance->status_channel_label));
-
-        if (is_check_label && is_check_label_visible)
-        {
-            rpi_set_visible_widget_misc(GTK_WIDGET(instance->status_channel_label), !is_check_label_visible);
-        }
-
-        gboolean is_verical_bar = GTK_IS_VB(instance->status_channel_vertical_bar);
-        gboolean is_verical_bar_visible = rpi_is_widget_visible_misc(GTK_WIDGET(instance->status_channel_vertical_bar));
-
-        if (is_verical_bar && is_verical_bar_visible)
-        {
-            rpi_set_visible_widget_misc(GTK_WIDGET(instance->status_channel_vertical_bar), !is_verical_bar_visible);
-        }
+        gtk_widget_hide(instance->frame);
     }
 }
 
@@ -189,27 +204,44 @@ GtkVB* get_vertical_bar_from_rpi_channel_status(RPIChannelStatus *instance)
     return NULL;
 }
 
+GtkWidget* get_frame_from_rpi_channel_status(RPIChannelStatus *instance)
+{
+    if (instance && GTK_IS_FRAME(instance->frame))
+    {
+        return instance->frame;
+    }
+
+    return NULL;
+}
+
+void set_value_to_rpi_channel_status(RPIChannelStatus *instance, gint value)
+{
+    if (instance)
+    {
+        instance->current_value = value;
+        if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(instance->activate_channel_check_box)))
+        {
+            gtk_vb_set_state(instance->status_channel_vertical_bar, value);
+            gchar status_label[32] = {0};
+            g_snprintf(status_label, sizeof(status_label), "Channel %d: %d", instance->channel_id, value);
+            gtk_label_set_text(GTK_LABEL(instance->status_channel_label), status_label);
+        }
+    }
+}
+
 void destroy_rpi_channel_status(RPIChannelStatus *instance)
 {
     if (instance)
     {
-        if (GTK_IS_LABEL(instance->status_channel_label))
+        if (GTK_IS_FRAME(instance->frame))
         {
-            rpi_destroy_widget_misc(GTK_WIDGET(instance->status_channel_label));
-            instance->status_channel_label = NULL;
+            rpi_destroy_widget_misc(instance->frame);
+            instance->frame = NULL;
         }
 
-        if (GTK_IS_CHECK_BUTTON(instance->activate_channel_check_box))
-        {
-            rpi_destroy_widget_misc(GTK_WIDGET(instance->activate_channel_check_box));
-            instance->activate_channel_check_box = NULL;
-        }
-
-        if (GTK_IS_VB(instance->status_channel_vertical_bar))
-        {
-            gtk_vb_destroy(instance->status_channel_vertical_bar);
-            instance->status_channel_vertical_bar = NULL;
-        }
+        instance->status_channel_label = NULL;
+        instance->activate_channel_check_box = NULL;
+        instance->status_channel_vertical_bar = NULL;
 
         g_free(instance);
     }

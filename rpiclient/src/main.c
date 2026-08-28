@@ -21,10 +21,12 @@
 #include "home/rpi_home.h"
 #include "home/rpi_menu.h"
 #include "exit/rpi_exit_dialog.h"
+#include "settings/rpi_settings_config.h"
 #include "settings/rpi_settings_network_window.h"
 #include "settings/rpi_settings_general_window.h"
 #include "help/rpi_help_window.h"
 #include "about/rpi_about_dialog.h"
+#include "network/rpi_network.h"
 
 #if RPI_VERBOSE == 1
     #define ON_EXIT_RPI_CLIENT "On exit RPIClient main thread.\n"
@@ -40,25 +42,31 @@
 #define FAILED_RPI_CLIENT "Runtime GTK version does not match compile-time version!\n"
 
 RPIHome *app = NULL;
-/*ServerParameters *server_parameters;*/
-/*GThreadParameters *gthread_parameters;*/
 gchar *resource_dir_path = NULL;
 gchar *config_dir_path = NULL;
 
-static void on_exit(GtkWidget *widget, gpointer data);
+static gboolean on_app_exit(GtkWidget *widget, GdkEvent *event, gpointer data);
+static void on_menu_exit(GtkWidget *widget, gpointer data);
 static void on_option_connect(GtkWidget *widget, gpointer data);
 static void on_option_disconnect(GtkWidget *widget, gpointer data);
 static void on_show_settings_general(GtkWidget *widget, gpointer data);
 static void on_show_settings_network(GtkWidget *widget, gpointer data);
 static void on_show_help(GtkWidget *widget, gpointer data);
 static void on_show_about(GtkWidget *widget, gpointer data);
+static void on_network_status_received(gint channel_id, gint value, gpointer user_data);
+static void load_css(void);
+
+static void on_network_status_received(gint channel_id, gint value, gpointer user_data)
+{
+    (void)user_data;
+    if (app)
+    {
+        rpi_home_update_channel_status(app, channel_id, value);
+    }
+}
 
 int main(int argc, char *argv[])
 {
-    // g_thread_init(NULL);
-    // gdk_threads_init();
-    // gdk_threads_enter();
-
     gtk_init(&argc, &argv);
 
     if (gtk_get_major_version() != GTK_MAJOR_VERSION)
@@ -67,13 +75,17 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    load_css();
+
     resource_dir_path = rpi_get_resource_dir();
     config_dir_path = rpi_get_config_dir();
     app = new_rpi_home();
     show_rpi_home(app);
 
-    g_signal_connect(G_OBJECT(get_window_from_rpi_home(app)), "delete_event", G_CALLBACK(on_exit), NULL);
-    rpi_menu_connect_signal(get_menu_bar_from_rpi_home(app), on_exit, "Exit");
+    rpi_network_set_status_callback(on_network_status_received, NULL);
+
+    g_signal_connect(G_OBJECT(get_window_from_rpi_home(app)), "delete_event", G_CALLBACK(on_app_exit), NULL);
+    rpi_menu_connect_signal(get_menu_bar_from_rpi_home(app), on_menu_exit, "Exit");
     rpi_menu_connect_signal(get_menu_bar_from_rpi_home(app), on_option_connect, "Connect");
     rpi_menu_connect_signal(get_menu_bar_from_rpi_home(app), on_option_disconnect, "Disconnect");
     rpi_menu_connect_signal(get_menu_bar_from_rpi_home(app), on_show_settings_general, "General");
@@ -81,17 +93,16 @@ int main(int argc, char *argv[])
     rpi_menu_connect_signal(get_menu_bar_from_rpi_home(app), on_show_help, "Help");
     rpi_menu_connect_signal(get_menu_bar_from_rpi_home(app), on_show_about, "About");
 
-    // yes_tid = g_thread_create(readSocket, NULL, FALSE, NULL);
-
     gtk_main();
-
-    // gdk_threads_leave();
 
     return 0;
 }
 
-static void on_exit(GtkWidget *widget, gpointer data)
+static gboolean on_app_exit(GtkWidget *widget, GdkEvent *event, gpointer data)
 {
+    (void)widget;
+    (void)event;
+    (void)data;
 #if RPI_VERBOSE == 1
     g_debug(ON_EXIT_RPI_CLIENT);
 #endif
@@ -101,6 +112,7 @@ static void on_exit(GtkWidget *widget, gpointer data)
 
     if (exit_code == CLOSE_ON_EXIT_DIALOG)
     {
+        rpi_network_disconnect();
         destroy_exit_dialog(exit_dialog);
         exit_dialog = NULL;
         destroy_rpi_home(app);
@@ -111,29 +123,70 @@ static void on_exit(GtkWidget *widget, gpointer data)
 #endif
 
         gtk_main_quit();
-        return;
+        return FALSE;
     }
 
     destroy_exit_dialog(exit_dialog);
     exit_dialog = NULL;
+    return TRUE;
+}
+
+static void on_menu_exit(GtkWidget *widget, gpointer data)
+{
+    (void)widget;
+    (void)data;
+    gtk_window_close(GTK_WINDOW(get_window_from_rpi_home(app)));
 }
 
 static void on_option_connect(GtkWidget *widget, gpointer data)
 {
+    (void)widget;
+    (void)data;
 #if RPI_VERBOSE == 1
     g_debug(ON_CONNECT_RPI_CLIENT);
 #endif
 
-    g_warning("%s", "connect\n");
+    SettingsConfig *config = settings_read();
+    const gchar *ip = "127.0.0.1";
+    gint port = 8000;
+    gchar *cfg_ip = NULL;
+    gchar *cfg_port = NULL;
+
+    if (config)
+    {
+        cfg_ip = get_server_ip_address_from_settings(config);
+        cfg_port = get_server_port_number_from_settings(config);
+        if (cfg_ip && strlen(cfg_ip) > 0)
+        {
+            ip = cfg_ip;
+        }
+        if (cfg_port && strlen(cfg_port) > 0)
+        {
+            port = atoi(cfg_port);
+        }
+    }
+
+    gboolean res = rpi_network_connect(ip, port);
+    if (!res)
+    {
+        g_warning("Network: Could not connect to server at %s:%d\n", ip, port);
+    }
+
+    if (config)
+    {
+        settings_free(config);
+    }
 }
 
 static void on_option_disconnect(GtkWidget *widget, gpointer data)
 {
+    (void)widget;
+    (void)data;
 #if RPI_VERBOSE == 1
     g_debug(ON_DISCONNECT_RPI_CLIENT);
 #endif
 
-    g_warning("%s", "disconnect\n");
+    rpi_network_disconnect();
 }
 
 static void on_show_settings_general(GtkWidget *widget, gpointer data)
@@ -190,4 +243,17 @@ static void on_show_about(GtkWidget *widget, gpointer data)
     {
         show_about_dialog(about_dialog);
     }
+}
+
+static void load_css(void)
+{
+    GtkCssProvider *provider = gtk_css_provider_new();
+
+    gtk_css_provider_load_from_resource(provider, "/org/rpiclient/gtk/style.css");
+    gtk_style_context_add_provider_for_screen(
+        gdk_screen_get_default(),
+        GTK_STYLE_PROVIDER(provider),
+        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION
+    );
+    g_object_unref(provider);
 }

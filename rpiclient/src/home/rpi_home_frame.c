@@ -30,43 +30,27 @@
 #define FAILED_MALLOC_HOME_FRAME "Failed to allocate memory for home frame.\n"
 
 static const gchar* CONTROL_FRAME_LABEL_HOME_FRAME = "RPI Control";
-static const gint START_X_POSITION_VERTICAL_BAR_CONTROL_HOME_FRAME = 0;
-static const gint Y_POSITION_VERTICAL_BAR_CONTROL_HOME_FRAME = 20;
-static const gint START_X_POSITION_SCALE_CONTROL_HOME_FRAME = 70;
-static const gint Y_POSITION_SCALE_CONTROL_HOME_FRAME = 0;
-static const gint START_X_POSITION_SPINER_BUTTON_CONTROL_HOME_FRAME = 0;
-static const gint Y_POSITION_SPINER_BUTTON_CONTROL_HOME_FRAME = 220;
-static const gint START_X_POSITION_ACTIVATE_GPIO_CONTROL_HOME_FRAME = 0;
-static const gint Y_POSITION_ACTIVATE_GPIO_CONTROL_HOME_FRAME = 190;
-static const gint SHIFT_X_POSITION_CONTROL_HOME_FRAME = 125;
 static const gchar* STATUS_FRAME_LABEL_HOME_FRAME = "RPI Status";
-static const gint START_X_POSITION_VERTICAL_BAR_STATUS_HOME_FRAME = 0;
-static const gint Y_POSITION_VERTICAL_BAR_STATUS_HOME_FRAME = 0;
-static const gint START_X_POSITION_ACTIVATE_CHANNEL_STATUS_HOME_FRAME = 0;
-static const gint Y_POSITION_ACTIVATE_CHANNEL_STATUS_HOME_FRAME = 160;
-static const gint START_X_POSITION_LABEL_STATUS_HOME_FRAME = 0;
-static const gint Y_POSITION_LABEL_STATUS_HOME_FRAME = 200;
-static const gint SHIFT_X_POSITION_STATUS_HOME_FRAME = 125;
 
 //////////////////////////////////////////////////////////////////////////////
 /// @brief RPIHomeFrame frame complex widget
 ///   frame_home - Gtk widget for home frame
-///   vpanned - Gtk widget for vertical panned
+///   vpaned - Gtk widget for vertical paned
 ///   frame_status - Gtk widget for status frame
-///   fixed_status - Gtk widget for status fixed container
-///   channel_status - Complex custom widget for channel status
+///   box_status - Gtk widget for status horizontal box container
+///   channels_status - Complex custom widgets for channel status
 ///   frame_control - Gtk widget for control frame
-///   fixed_control - Gtk widget for control fixed container
-///   channel_control - Complex custom widget for channel control
+///   box_control - Gtk widget for control horizontal box container
+///   channels_control - Complex custom widgets for channel control
 struct _RPIRPIHomeFrame
 {
     GtkWidget *frame_home;
     GtkWidget *vpaned;
     GtkWidget *frame_status;
-    GtkWidget *fixed_status;
+    GtkWidget *box_status;
     RPIChannelStatus *channels_status[MAX_CHANNELS_STATUS_HOME_FRAME];
     GtkWidget *frame_control;
-    GtkWidget *fixed_control;
+    GtkWidget *box_control;
     RPIChannelControl *channels_control[MAX_CHANNELS_CONTROL_HOME_FRAME];
 };
 
@@ -100,6 +84,7 @@ RPIHomeFrame *new_rpi_home_frame(void)
 
     gtk_frame_set_shadow_type(GTK_FRAME(instance->frame_home), GTK_SHADOW_IN);
     gtk_container_add(GTK_CONTAINER(instance->frame_home), instance->vpaned);
+
     instance->frame_control = gtk_frame_new(CONTROL_FRAME_LABEL_HOME_FRAME);
 
     if (!GTK_IS_FRAME(instance->frame_control))
@@ -109,17 +94,34 @@ RPIHomeFrame *new_rpi_home_frame(void)
         return NULL;
     }
 
-    instance->fixed_control = gtk_fixed_new();
+    instance->box_control = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
 
-    if (!GTK_IS_FIXED(instance->fixed_control))
+    if (!GTK_IS_BOX(instance->box_control))
     {
         g_critical(FAILED_MALLOC_HOME_FRAME);
         destroy_rpi_home_frame(instance);
         return NULL;
     }
 
+    gtk_box_set_homogeneous(GTK_BOX(instance->box_control), TRUE);
+    gtk_container_set_border_width(GTK_CONTAINER(instance->box_control), 6);
     gtk_frame_set_shadow_type(GTK_FRAME(instance->frame_control), GTK_SHADOW_IN);
-    gtk_container_add(GTK_CONTAINER(instance->frame_control), instance->fixed_control);
+    gtk_container_add(GTK_CONTAINER(instance->frame_control), instance->box_control);
+
+    for (guint i = 0; i < MAX_CHANNELS_CONTROL_HOME_FRAME; i++)
+    {
+        instance->channels_control[i] = new_rpi_channel_control(i + 1);
+        gtk_box_pack_start(
+            GTK_BOX(instance->box_control),
+            get_frame_from_rpi_channel_control(instance->channels_control[i]),
+            TRUE, TRUE, 0
+        );
+
+#if RPI_VERBOSE == 1
+        g_debug(SETUP_CONTROL_CHANNEL_HOME_FRAME, i);
+#endif
+    }
+
     instance->frame_status = gtk_frame_new(STATUS_FRAME_LABEL_HOME_FRAME);
 
     if (!GTK_IS_FRAME(instance->frame_status))
@@ -129,93 +131,32 @@ RPIHomeFrame *new_rpi_home_frame(void)
         return NULL;
     }
 
-    instance->fixed_status = gtk_fixed_new();
+    instance->box_status = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
 
-    if (!GTK_IS_FIXED(instance->fixed_status))
+    if (!GTK_IS_BOX(instance->box_status))
     {
         g_critical(FAILED_MALLOC_HOME_FRAME);
         destroy_rpi_home_frame(instance);
         return NULL;
     }
 
+    gtk_box_set_homogeneous(GTK_BOX(instance->box_status), TRUE);
+    gtk_container_set_border_width(GTK_CONTAINER(instance->box_status), 6);
     gtk_frame_set_shadow_type(GTK_FRAME(instance->frame_status), GTK_SHADOW_IN);
-    gtk_container_add(GTK_CONTAINER(instance->frame_status), GTK_WIDGET(instance->fixed_status));
-    gint x_pos_vbar = START_X_POSITION_VERTICAL_BAR_STATUS_HOME_FRAME;
-    gint x_pos_activate_channel = START_X_POSITION_ACTIVATE_CHANNEL_STATUS_HOME_FRAME;
-    gint x_pos_label = START_X_POSITION_LABEL_STATUS_HOME_FRAME;
+    gtk_container_add(GTK_CONTAINER(instance->frame_status), instance->box_status);
 
     for (guint i = 0; i < MAX_CHANNELS_STATUS_HOME_FRAME; i++)
     {
-        instance->channels_status[i] = new_rpi_channel_status(i);
-        gtk_fixed_put(
-            GTK_FIXED(instance->fixed_status),
-            GTK_WIDGET(get_vertical_bar_from_rpi_channel_status(instance->channels_status[i])),
-            x_pos_vbar,
-            Y_POSITION_VERTICAL_BAR_STATUS_HOME_FRAME
+        instance->channels_status[i] = new_rpi_channel_status(i + 1);
+        gtk_box_pack_start(
+            GTK_BOX(instance->box_status),
+            get_frame_from_rpi_channel_status(instance->channels_status[i]),
+            TRUE, TRUE, 0
         );
-        x_pos_vbar += SHIFT_X_POSITION_STATUS_HOME_FRAME;
-        gtk_fixed_put(
-            GTK_FIXED(instance->fixed_status),
-            GTK_WIDGET(get_check_box_from_rpi_channel_status(instance->channels_status[i])),
-            x_pos_activate_channel,
-            Y_POSITION_ACTIVATE_CHANNEL_STATUS_HOME_FRAME
-        );
-        x_pos_activate_channel += SHIFT_X_POSITION_STATUS_HOME_FRAME;
-        gtk_fixed_put(
-            GTK_FIXED(instance->fixed_status),
-            GTK_WIDGET(get_label_from_rpi_channel_status(instance->channels_status[i])),
-            x_pos_label,
-            Y_POSITION_LABEL_STATUS_HOME_FRAME
-        );
-        x_pos_label += SHIFT_X_POSITION_STATUS_HOME_FRAME;
 
 #if RPI_VERBOSE == 1
         g_debug(SETUP_STATUS_CHANNEL_HOME_FRAME, i);
 #endif
-
-    }
-
-    x_pos_vbar = START_X_POSITION_VERTICAL_BAR_CONTROL_HOME_FRAME;
-    gint x_pos_control_channel_scale = START_X_POSITION_SCALE_CONTROL_HOME_FRAME;
-    gint x_pos_spiner_button = START_X_POSITION_SPINER_BUTTON_CONTROL_HOME_FRAME;
-    gint x_pos_control_channel_gpio_check_box = START_X_POSITION_ACTIVATE_GPIO_CONTROL_HOME_FRAME;
-
-    for (guint i = 0; i < MAX_CHANNELS_CONTROL_HOME_FRAME; i++)
-    {
-        instance->channels_control[i] = new_rpi_channel_control(i + 1);
-        gtk_fixed_put(
-            GTK_FIXED(instance->fixed_control),
-            GTK_WIDGET(get_vertical_bar_from_rpi_channel_control(instance->channels_control[i])),
-            x_pos_vbar,
-            Y_POSITION_VERTICAL_BAR_CONTROL_HOME_FRAME
-        );
-        x_pos_vbar += SHIFT_X_POSITION_CONTROL_HOME_FRAME;
-        gtk_fixed_put(
-            GTK_FIXED(instance->fixed_control),
-            GTK_WIDGET(get_scale_from_rpi_channel_control(instance->channels_control[i])),
-            x_pos_control_channel_scale,
-            Y_POSITION_SCALE_CONTROL_HOME_FRAME
-        );
-        x_pos_control_channel_scale += SHIFT_X_POSITION_CONTROL_HOME_FRAME;
-        gtk_fixed_put(
-            GTK_FIXED(instance->fixed_control),
-            GTK_WIDGET(get_spinner_button_from_rpi_channel_control(instance->channels_control[i])),
-            x_pos_spiner_button,
-            Y_POSITION_SPINER_BUTTON_CONTROL_HOME_FRAME
-        );
-        x_pos_spiner_button += SHIFT_X_POSITION_CONTROL_HOME_FRAME;
-        gtk_fixed_put(
-            GTK_FIXED(instance->fixed_control),
-            GTK_WIDGET(get_check_box_from_rpi_channel_control(instance->channels_control[i])),
-            x_pos_control_channel_gpio_check_box,
-            Y_POSITION_ACTIVATE_GPIO_CONTROL_HOME_FRAME
-        );
-        x_pos_control_channel_gpio_check_box += SHIFT_X_POSITION_CONTROL_HOME_FRAME;
-
-#if RPI_VERBOSE == 1
-        g_debug(SETUP_CONTROL_CHANNEL_HOME_FRAME, i);
-#endif
-
     }
 
     gtk_paned_add1(GTK_PANED(instance->vpaned), GTK_WIDGET(instance->frame_control));
@@ -267,6 +208,21 @@ GtkWidget* get_frame_from_rpi_home_frame(RPIHomeFrame *instance)
     return NULL;
 }
 
+void rpi_home_frame_update_channel_status(RPIHomeFrame *instance, gint channel_id, gint value)
+{
+    if (instance)
+    {
+        if (channel_id >= 1 && channel_id <= MAX_CHANNELS_STATUS_HOME_FRAME)
+        {
+            gint idx = channel_id - 1;
+            if (instance->channels_status[idx])
+            {
+                set_value_to_rpi_channel_status(instance->channels_status[idx], value);
+            }
+        }
+    }
+}
+
 void destroy_rpi_home_frame(RPIHomeFrame *instance)
 {
     if (instance)
@@ -297,9 +253,9 @@ void destroy_rpi_home_frame(RPIHomeFrame *instance)
 
         instance->vpaned = NULL;
         instance->frame_status = NULL;
-        instance->fixed_status = NULL;
+        instance->box_status = NULL;
         instance->frame_control = NULL;
-        instance->fixed_control = NULL;
+        instance->box_control = NULL;
         g_free(instance);
     }
 }
