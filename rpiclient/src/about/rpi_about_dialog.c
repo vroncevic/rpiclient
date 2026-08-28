@@ -48,7 +48,7 @@ struct _AboutDialog
 
 AboutDialog *new_about_dialog(void)
 {
-    AboutDialog *instance = g_malloc(sizeof(AboutDialog));
+    AboutDialog *instance = g_try_malloc(sizeof(AboutDialog));
 
     if(!instance)
     {
@@ -109,6 +109,8 @@ AboutDialog *new_about_dialog(void)
 
 void show_about_dialog(AboutDialog *instance)
 {
+    if (!instance) return;
+
     if (instance)
     {
         gboolean is_about_dialog = GTK_IS_ABOUT_DIALOG(instance->dialog);
@@ -123,6 +125,8 @@ void show_about_dialog(AboutDialog *instance)
 
 void hide_about_dialog(AboutDialog *instance)
 {
+    if (!instance) return;
+
     if (instance)
     {
         gboolean is_about_dialog = GTK_IS_ABOUT_DIALOG(instance->dialog);
@@ -137,6 +141,8 @@ void hide_about_dialog(AboutDialog *instance)
 
 void destroy_about_dialog(AboutDialog *instance)
 {
+    if (!instance) return;
+
     if (instance)
     {
         if (GTK_IS_ABOUT_DIALOG(instance->dialog))

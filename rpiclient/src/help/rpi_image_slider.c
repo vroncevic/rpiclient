@@ -62,6 +62,9 @@ struct _ImageSlider
     guint slider_count;
 };
 
+static void on_button_left_clicked(GtkWidget *widget, ImageSlider *instance);
+static void on_button_right_clicked(GtkWidget *widget, ImageSlider *instance);
+
 ImageSlider *new_image_slider(void)
 {
     ImageSlider *instance = g_malloc(sizeof(ImageSlider));
@@ -144,6 +147,13 @@ ImageSlider *new_image_slider(void)
         X_POSITION_BUTTON_RIGHT_IMAGE_SLIDER, Y_POSITION_BUTTON_RIGHT_IMAGE_SLIDER
     );
 
+    g_signal_connect(
+        G_OBJECT(instance->button_left), "clicked", G_CALLBACK(on_button_left_clicked), instance
+    );
+    g_signal_connect(
+        G_OBJECT(instance->button_right), "clicked", G_CALLBACK(on_button_right_clicked), instance
+    );
+
     return instance;
 }
 
@@ -194,5 +204,58 @@ void destroy_image_slider(ImageSlider *instance)
         instance->button_left = NULL;
         instance->button_right = NULL;
         g_free(instance);
+    }
+}
+
+static void on_button_left_clicked(GtkWidget *widget, ImageSlider *instance)
+{
+    if (instance)
+    {
+        if (instance->slider_count == 0)
+        {
+            instance->slider_count = MAX_IMAGES_IMAGE_SLIDER - 1;
+        }
+        else
+        {
+            instance->slider_count--;
+        }
+
+        gchar image_name[16] = {0};
+        g_snprintf(image_name, sizeof(image_name), "%d.png", instance->slider_count + 1);
+        gchar *image_file_path = rpi_get_resource_file_path(image_name);
+
+        if (image_file_path)
+        {
+            gtk_image_set_from_file(GTK_IMAGE(instance->image), image_file_path);
+#if RPI_VERBOSE == 1
+            g_debug(IMAGE_PATH_IMAGE_SLIDER, image_file_path);
+#endif
+            g_free(image_file_path);
+        }
+    }
+}
+
+static void on_button_right_clicked(GtkWidget *widget, ImageSlider *instance)
+{
+    if (instance)
+    {
+        instance->slider_count++;
+        if (instance->slider_count >= MAX_IMAGES_IMAGE_SLIDER)
+        {
+            instance->slider_count = 0;
+        }
+
+        gchar image_name[16] = {0};
+        g_snprintf(image_name, sizeof(image_name), "%d.png", instance->slider_count + 1);
+        gchar *image_file_path = rpi_get_resource_file_path(image_name);
+
+        if (image_file_path)
+        {
+            gtk_image_set_from_file(GTK_IMAGE(instance->image), image_file_path);
+#if RPI_VERBOSE == 1
+            g_debug(IMAGE_PATH_IMAGE_SLIDER, image_file_path);
+#endif
+            g_free(image_file_path);
+        }
     }
 }

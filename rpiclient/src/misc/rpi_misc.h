@@ -21,6 +21,10 @@
 #include <gtk/gtk.h>
 
 //////////////////////////////////////////////////////////////////////////////
+/// @brief Error messqge with supported Gtk versions.
+#define GTK_SUPPORTED_VERSION "Supported GTK+ version: gtk+-3.0 gtk+-4.0!"
+
+//////////////////////////////////////////////////////////////////////////////
 /// @brief Checks is gtk+ widget visible or not
 /// @param widget is pointer to gtk+ widget (GtkWidget)
 /// @return TRUE - visible | FALSE - not visible

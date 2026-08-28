@@ -5,7 +5,7 @@
 ##
 
 # Sub dirs with source modules
-AM_SUBDIRS = home about format exit help info resource settings warning widgets
+AM_SUBDIRS = home about format exit help info resource settings warning widgets network
 
 # Automake dirs
 AM_CPPFLAGS = \
@@ -59,6 +59,7 @@ rpiclient_SOURCES = \
 	home/rpi_menu.c \
 	home/rpi_channel_status.c \
 	home/rpi_channel_control.c \
+	network/rpi_network.c \
 	about/rpi_about_dialog.c \
 	format/rpi_format.c \
 	exit/rpi_exit_dialog.c \
@@ -78,7 +79,14 @@ rpiclient_SOURCES = \
 	settings/rpi_settings_plain.c \
 	settings/rpi_settings_sqlite.c \
 	warning/rpi_warning_dialog.c \
-	widgets/rpi_vertical_bar.c
+	widgets/rpi_vertical_bar.c \
+	resource/rpi_resources.c
+
+BUILT_SOURCES = resource/rpi_resources.c
+CLEANFILES = resource/rpi_resources.c
+
+resource/rpi_resources.c: $(srcdir)/resource/rpi_resources.gresource.xml $(srcdir)/resource/style.css
+	glib-compile-resources --target=$@ --sourcedir=$(srcdir)/resource --generate-source $<
 
 # Specify installation directory for the binary
 install-exec-hook:

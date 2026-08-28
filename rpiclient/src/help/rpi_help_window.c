@@ -46,6 +46,8 @@ struct _HelpWindow
     ImageSlider *image_slider;
 };
 
+static void on_window_destroy(GtkWidget *widget, gpointer data);
+
 HelpWindow *new_help_window(void)
 {
     HelpWindow *instance = g_malloc(sizeof(HelpWindow));
@@ -114,8 +116,8 @@ HelpWindow *new_help_window(void)
     gtk_container_add(
         GTK_CONTAINER(instance->window), GTK_WIDGET(get_fixed_image_slider(instance->image_slider))
     );
-    g_signal_connect_swapped(
-        G_OBJECT(instance->window), "delete-event", G_CALLBACK(destroy_help_window), instance
+    g_signal_connect(
+        G_OBJECT(instance->window), "destroy", G_CALLBACK(on_window_destroy), instance
     );
 
     return instance;
@@ -150,8 +152,9 @@ void hide_help_window(HelpWindow *instance)
     }
 }
 
-void destroy_help_window(HelpWindow *instance)
+static void on_window_destroy(GtkWidget *widget, gpointer data)
 {
+    HelpWindow *instance = (HelpWindow *)data;
     if (instance)
     {
         if (instance->image_slider)
@@ -159,13 +162,17 @@ void destroy_help_window(HelpWindow *instance)
             destroy_image_slider(instance->image_slider);
             instance->image_slider = NULL;
         }
+        g_free(instance);
+    }
+}
 
+void destroy_help_window(HelpWindow *instance)
+{
+    if (instance)
+    {
         if (GTK_IS_WINDOW(instance->window))
         {
             rpi_destroy_widget_misc(GTK_WIDGET(instance->window));
-            instance->window = NULL;
         }
-
-        g_free(instance);
     }
 }

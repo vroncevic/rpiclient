@@ -19,16 +19,12 @@
 #include "../rpi_config.h"
 #include "rpi_settings.h"
 
+#include "rpi_settings_provider.h"
+#include "rpi_settings_plain.h"
+#include "rpi_settings_sqlite.h"
+
 #if (RPI_USE_SETTINGS_PLAIN_CONFIG == 1) && (RPI_USE_SETTINGS_SQLITE3 == 1)
 #error "You cannot use both RPI_USE_SETTINGS_PLAIN_CONFIG and RPI_USE_SETTINGS_SQLITE3 at the same time!"
-#endif
-
-#if (RPI_USE_SETTINGS_PLAIN_CONFIG == 1) && (RPI_USE_SETTINGS_SQLITE3 == 0)
-#include "rpi_settings_plain.h"
-#endif
-
-#if (RPI_USE_SETTINGS_PLAIN_CONFIG == 0) && (RPI_USE_SETTINGS_SQLITE3 == 1)
-#include "rpi_settings_sqlite.h"
 #endif
 
 #include "rpi_settings_config.h"
@@ -48,6 +44,52 @@
 
 static const gchar* TRUE_SETTINGS_CONFIG = "true";
 static const gchar* FALSE_SETTINGS_CONFIG = "false";
+
+static guint sqlite_write_prompt_wrapper(const gchar* no_prompt) {
+    return (guint)rpi_write_no_prompt_settings_sqlite(no_prompt);
+}
+static guint sqlite_write_address_wrapper(const gchar* ip_address) {
+    return (guint)rpi_write_ip_address_settings_sqlite(ip_address);
+}
+static guint sqlite_write_port_wrapper(const gchar* port_number) {
+    return (guint)rpi_write_port_number_settings_sqlite(port_number);
+}
+static guint sqlite_write_exit_wrapper(const gchar* no_exit) {
+    return (guint)rpi_write_no_exit_settings_sqlite(no_exit);
+}
+
+static const SettingsStorageProvider plain_provider = {
+    .read_prompt = rpi_read_prompt_settings_plain_file,
+    .read_address = rpi_read_address_settings_plain_file,
+    .read_port = rpi_read_port_settings_plain_file,
+    .read_exit = rpi_read_exit_settings_plain_file,
+    .write_prompt = rpi_write_prompt_settings_plain_file,
+    .write_address = rpi_write_address_settings_plain_file,
+    .write_port = rpi_write_port_settings_plain_file,
+    .write_exit = rpi_write_exit_settings_plain_file
+};
+
+static const SettingsStorageProvider sqlite_provider = {
+    .read_prompt = rpi_read_no_prompt_settings_sqlite,
+    .read_address = rpi_read_ip_address_settings_sqlite,
+    .read_port = rpi_read_port_number_settings_sqlite,
+    .read_exit = rpi_read_no_exit_settings_sqlite,
+    .write_prompt = sqlite_write_prompt_wrapper,
+    .write_address = sqlite_write_address_wrapper,
+    .write_port = sqlite_write_port_wrapper,
+    .write_exit = sqlite_write_exit_wrapper
+};
+
+static const SettingsStorageProvider* get_current_provider(void)
+{
+#if (RPI_USE_SETTINGS_PLAIN_CONFIG == 1) && (RPI_USE_SETTINGS_SQLITE3 == 0)
+    return &plain_provider;
+#elif (RPI_USE_SETTINGS_PLAIN_CONFIG == 0) && (RPI_USE_SETTINGS_SQLITE3 == 1)
+    return &sqlite_provider;
+#else
+    #error "Invalid configuration settings backend choice."
+#endif
+}
 
 //////////////////////////////////////////////////////////////////////////////
 /// @brief Settings configuration structure
@@ -73,41 +115,23 @@ SettingsConfig* settings_read(void)
         return NULL;
     }
 
-#if (RPI_USE_SETTINGS_PLAIN_CONFIG == 1) && (RPI_USE_SETTINGS_SQLITE3 == 0)
-    gchar* prompt_config = rpi_read_prompt_settings_plain_file();
-    gchar* address_config = rpi_read_address_settings_plain_file();
-    gchar* port_config = rpi_read_port_settings_plain_file();
-    gchar* exit_config = rpi_read_exit_settings_plain_file();
+    const SettingsStorageProvider* provider = get_current_provider();
+    gchar* prompt_config = provider->read_prompt();
+    gchar* address_config = provider->read_address();
+    gchar* port_config = provider->read_port();
+    gchar* exit_config = provider->read_exit();
     gboolean nok_settings = (!prompt_config || !address_config || !port_config || !exit_config);
 
     if (nok_settings)
     {
         g_critical(FAILED_READ_SETTINGS_CONFIG);
 
-        if (prompt_config)
-        {
-            g_free(prompt_config);
-            prompt_config = NULL;
-        }
+        if (prompt_config) g_free(prompt_config);
+        if (address_config) g_free(address_config);
+        if (port_config) g_free(port_config);
+        if (exit_config) g_free(exit_config);
 
-        if (address_config)
-        {
-            g_free(address_config);
-            address_config = NULL;
-        }
-
-        if (port_config)
-        {
-            g_free(port_config);
-            port_config = NULL;
-        }
-
-        if (exit_config)
-        {
-            g_free(exit_config);
-            exit_config = NULL;
-        }
-
+        g_free(instance);
         return NULL;
     }
 
@@ -116,98 +140,10 @@ SettingsConfig* settings_read(void)
     instance->port_number = g_strdup(port_config);
     instance->no_exit = g_strdup(exit_config);
 
-    if (prompt_config)
-    {
-        g_free(prompt_config);
-        prompt_config = NULL;
-    }
-
-    if (address_config)
-    {
-        g_free(address_config);
-        address_config = NULL;
-    }
-
-    if (port_config)
-    {
-        g_free(port_config);
-        port_config = NULL;
-    }
-
-    if (exit_config)
-    {
-        g_free(exit_config);
-        exit_config = NULL;
-    }
-#endif
-
-#if (RPI_USE_SETTINGS_PLAIN_CONFIG == 0) && (RPI_USE_SETTINGS_SQLITE3 == 1)
-    gchar* prompt_config = rpi_read_no_prompt_settings_sqlite();
-    gchar* address_config = rpi_read_ip_address_settings_sqlite();
-    gchar* port_config = rpi_read_port_number_settings_sqlite();
-    gchar* exit_config = rpi_read_no_exit_settings_sqlite();
-    gboolean nok_settings = (!prompt_config || !address_config || !port_config || !exit_config);
-
-    if (nok_settings)
-    {
-        g_critical(FAILED_READ_SETTINGS_CONFIG);
-
-        if (prompt_config)
-        {
-            g_free(prompt_config);
-            prompt_config = NULL;
-        }
-
-        if (address_config)
-        {
-            g_free(address_config);
-            address_config = NULL;
-        }
-
-        if (port_config)
-        {
-            g_free(port_config);
-            port_config = NULL;
-        }
-
-        if (exit_config)
-        {
-            g_free(exit_config);
-            exit_config = NULL;
-        }
-
-        return NULL;
-    }
-
-    instance->no_prompt = g_strdup(prompt_config);
-    instance->ip_address = g_strdup(address_config);
-    instance->port_number = g_strdup(port_config);
-    instance->no_exit = g_strdup(exit_config);
-
-    if (prompt_config)
-    {
-        g_free(prompt_config);
-        prompt_config = NULL;
-    }
-
-    if (address_config)
-    {
-        g_free(address_config);
-        address_config = NULL;
-    }
-
-    if (port_config)
-    {
-        g_free(port_config);
-        port_config = NULL;
-    }
-
-    if (exit_config)
-    {
-        g_free(exit_config);
-        exit_config = NULL;
-    }
-#endif
+    g_free(prompt_config);
+    g_free(address_config);
+    g_free(port_config);
+    g_free(exit_config);
 
 #if RPI_VERBOSE == 1
     g_debug(READ_SUCCESS_SETTINGS_CONFIG);
@@ -224,16 +160,23 @@ guint settings_write(const SettingsConfig* instance)
         return FAILED_IO_SETTINGS_CONFIGURATION;
     }
 
-#if (RPI_USE_SETTINGS_PLAIN_CONFIG == 1) && (RPI_USE_SETTINGS_SQLITE3 == 0)
-    guint prompt_status = rpi_write_prompt_settings_plain_file(instance->no_prompt);
-    guint address_status = rpi_write_address_settings_plain_file(instance->ip_address);
-    guint port_status = rpi_write_port_settings_plain_file(instance->port_number);
-    guint exit_status = rpi_write_exit_settings_plain_file(instance->no_exit);
+    const SettingsStorageProvider* provider = get_current_provider();
+
+#if (RPI_USE_SETTINGS_PLAIN_CONFIG == 1)
+    guint err_flag = FAILED_SETTINGS_PLAIN;
+#else
+    guint err_flag = FAILED_SETTINGS_SQLITE;
+#endif
+
+    guint prompt_status = provider->write_prompt(instance->no_prompt);
+    guint address_status = provider->write_address(instance->ip_address);
+    guint port_status = provider->write_port(instance->port_number);
+    guint exit_status = provider->write_exit(instance->no_exit);
     gboolean nok_write_status = (
-        prompt_status == FAILED_SETTINGS_PLAIN ||
-        address_status == FAILED_SETTINGS_PLAIN ||
-        port_status == FAILED_SETTINGS_PLAIN ||
-        exit_status == FAILED_SETTINGS_PLAIN
+        prompt_status == err_flag ||
+        address_status == err_flag ||
+        port_status == err_flag ||
+        exit_status == err_flag
     );
 
     if (nok_write_status)
@@ -241,26 +184,6 @@ guint settings_write(const SettingsConfig* instance)
         g_critical(FAILED_WRITE_SETTINGS_CONFIG);
         return FAILED_IO_SETTINGS_CONFIGURATION;
     }
-#endif
-
-#if (RPI_USE_SETTINGS_PLAIN_CONFIG == 0) && (RPI_USE_SETTINGS_SQLITE3 == 1)
-    guint prompt_status = rpi_write_no_prompt_settings_sqlite(instance->no_prompt);
-    guint address_status = rpi_write_ip_address_settings_sqlite(instance->ip_address);
-    guint port_status = rpi_write_port_number_settings_sqlite(instance->port_number);
-    guint exit_status = rpi_write_no_exit_settings_sqlite(instance->no_exit);
-    gboolean nok_write_status = (
-        prompt_status == FAILED_SETTINGS_SQLITE ||
-        address_status == FAILED_SETTINGS_SQLITE ||
-        port_status == FAILED_SETTINGS_SQLITE ||
-        exit_status == FAILED_SETTINGS_SQLITE
-    );
-
-    if (nok_write_status)
-    {
-        g_critical(FAILED_WRITE_SETTINGS_CONFIG);
-        return FAILED_IO_SETTINGS_CONFIGURATION;
-    }
-#endif
 
 #if RPI_VERBOSE == 1
     g_debug(WRITE_SUCCESS_SETTINGS_CONFIG);
@@ -278,13 +201,14 @@ void set_prompt_enabled_settings(SettingsConfig* instance, const gboolean no_pro
 {
     if (instance)
     {
+        g_free(instance->no_prompt);
         if (no_prompt_state)
         {
-            g_strlcpy(instance->no_prompt, TRUE_SETTINGS_CONFIG, g_utf8_strlen(TRUE_SETTINGS_CONFIG, -1) + 1);
+            instance->no_prompt = g_strdup(TRUE_SETTINGS_CONFIG);
         }
         else
         {
-            g_strlcpy(instance->no_prompt, FALSE_SETTINGS_CONFIG, g_utf8_strlen(FALSE_SETTINGS_CONFIG, -1) + 1);
+            instance->no_prompt = g_strdup(FALSE_SETTINGS_CONFIG);
         }
     }
     else
@@ -304,7 +228,8 @@ void set_server_ip_address_settings(SettingsConfig* instance, const gchar* ip_ad
     {
         if (ip_address)
         {
-            g_strlcpy(instance->ip_address, ip_address, g_utf8_strlen(ip_address, -1) + 1);
+            g_free(instance->ip_address);
+            instance->ip_address = g_strdup(ip_address);
         }
         else
         {
@@ -328,7 +253,8 @@ void set_server_port_number_settings(SettingsConfig* instance, const gchar* port
     {
         if (port_number)
         {
-            g_strlcpy(instance->port_number, port_number, g_utf8_strlen(port_number, -1) + 1);
+            g_free(instance->port_number);
+            instance->port_number = g_strdup(port_number);
         }
         else
         {
@@ -350,13 +276,14 @@ void set_exit_enabled_settings(SettingsConfig* instance, const gboolean no_exit_
 {
     if (instance)
     {
+        g_free(instance->no_exit);
         if (no_exit_state)
         {
-            g_strlcpy(instance->no_exit, TRUE_SETTINGS_CONFIG, g_utf8_strlen(TRUE_SETTINGS_CONFIG, -1) + 1);
+            instance->no_exit = g_strdup(TRUE_SETTINGS_CONFIG);
         }
         else
         {
-            g_strlcpy(instance->no_exit, FALSE_SETTINGS_CONFIG, g_utf8_strlen(FALSE_SETTINGS_CONFIG, -1) + 1);
+            instance->no_exit = g_strdup(FALSE_SETTINGS_CONFIG);
         }
     }
     else

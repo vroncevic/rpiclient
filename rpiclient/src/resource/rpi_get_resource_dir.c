@@ -41,5 +41,18 @@ gchar *rpi_get_resource_dir(void)
 
     g_free(image_dir_prefix);
     image_dir_prefix = NULL;
+
+    const gchar* dev_path1 = "rc/images/";
+    if (g_file_test(dev_path1, G_FILE_TEST_IS_DIR))
+    {
+        return g_strdup(dev_path1);
+    }
+
+    const gchar* dev_path2 = "../rc/images/";
+    if (g_file_test(dev_path2, G_FILE_TEST_IS_DIR))
+    {
+        return g_strdup(dev_path2);
+    }
+
     return NULL;    
 }

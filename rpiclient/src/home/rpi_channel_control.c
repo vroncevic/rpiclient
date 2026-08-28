@@ -17,12 +17,13 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 #include "../misc/rpi_misc.h"
+#include "../network/rpi_network.h"
 #include "rpi_channel_control.h"
 
 #define FAILED_MALLOC_CHANNEL_CONTROL "Failed to allocate memory for channel control.\n"
 
-static const gint WIDTH_SCALE_CHANNEL_CONTROL = 50;
-static const gint HEIGHT_SCALE_CHANNEL_CONTROL = 180;
+static const gint WIDTH_SCALE_CHANNEL_CONTROL = 40;
+static const gint HEIGHT_SCALE_CHANNEL_CONTROL = 200;
 static const gdouble MIN_VALUE_SCALE_CHANNEL_CONTROL = 0.0;
 static const gdouble MAX_VALUE_SCALE_CHANNEL_CONTROL = 100.0;
 static const gdouble STEP_VALUE_SCALE_CHANNEL_CONTROL = 1.0;
@@ -41,15 +42,78 @@ static const gint DIGITS_SPINNER_BUTTON_CHANNEL_CONTROL = 0;
 ///   control_channel_scale - Gtk scale widget for channel control
 ///   control_channel_spinner_adjustment - Gtk adjustment widget for channel control
 ///   control_channel_spinner_button - Gtk spinner widget for channel control
-///   control_channel_gpio_check_box - Gtk check box widget for channel control
+///   control_channel_check_box - Gtk check box widget for channel control
 struct _RPIChannelControl
 {
+    GtkWidget *frame;
     GtkVB *control_channel_vertical_bar;
     GtkWidget *control_channel_scale;
     GtkAdjustment *control_channel_spinner_adjustment;
     GtkWidget *control_channel_spinner_button;
-    GtkWidget *control_channel_gpio_check_box;
+    GtkWidget *control_channel_check_box;
+    gint channel_id;
+    gboolean is_updating;
 };
+
+static void on_scale_value_changed(GtkRange *range, gpointer user_data);
+static void on_spinner_value_changed(GtkSpinButton *spin_button, gpointer user_data);
+static void on_channel_check_box_toggled(GtkToggleButton *toggle_button, gpointer user_data);
+
+static void on_scale_value_changed(GtkRange *range, gpointer user_data)
+{
+    RPIChannelControl *instance = (RPIChannelControl *)user_data;
+    if (instance && !instance->is_updating)
+    {
+        instance->is_updating = TRUE;
+        gdouble val = gtk_range_get_value(range);
+        gtk_vb_set_state(instance->control_channel_vertical_bar, (gint)val);
+        gtk_spin_button_set_value(GTK_SPIN_BUTTON(instance->control_channel_spinner_button), val);
+        if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(instance->control_channel_check_box)))
+        {
+            rpi_network_send_channel(instance->channel_id, (gint)val);
+        }
+        instance->is_updating = FALSE;
+    }
+}
+
+static void on_spinner_value_changed(GtkSpinButton *spin_button, gpointer user_data)
+{
+    RPIChannelControl *instance = (RPIChannelControl *)user_data;
+    if (instance && !instance->is_updating)
+    {
+        instance->is_updating = TRUE;
+        gdouble val = gtk_spin_button_get_value(spin_button);
+        gtk_vb_set_state(instance->control_channel_vertical_bar, (gint)val);
+        gtk_range_set_value(GTK_RANGE(instance->control_channel_scale), val);
+        if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(instance->control_channel_check_box)))
+        {
+            rpi_network_send_channel(instance->channel_id, (gint)val);
+        }
+        instance->is_updating = FALSE;
+    }
+}
+
+static void on_channel_check_box_toggled(GtkToggleButton *toggle_button, gpointer user_data)
+{
+    RPIChannelControl *instance = (RPIChannelControl *)user_data;
+    if (instance)
+    {
+        gboolean is_active = gtk_toggle_button_get_active(toggle_button);
+        gtk_widget_set_sensitive(instance->control_channel_scale, is_active);
+        gtk_widget_set_sensitive(instance->control_channel_spinner_button, is_active);
+        if (!is_active)
+        {
+            gtk_vb_set_state(instance->control_channel_vertical_bar, 0);
+            rpi_network_send_channel(instance->channel_id, 0);
+        }
+        else
+        {
+            gdouble val = gtk_range_get_value(GTK_RANGE(instance->control_channel_scale));
+            gtk_vb_set_state(instance->control_channel_vertical_bar, (gint)val);
+            rpi_network_send_channel(instance->channel_id, (gint)val);
+        }
+    }
+}
 
 RPIChannelControl *new_rpi_channel_control(gint channel_id)
 {
@@ -60,6 +124,17 @@ RPIChannelControl *new_rpi_channel_control(gint channel_id)
         g_critical(FAILED_MALLOC_CHANNEL_CONTROL);
         return NULL;
     }
+
+    instance->channel_id = channel_id;
+    instance->is_updating = FALSE;
+    instance->frame = gtk_frame_new(NULL);
+    if (!GTK_IS_FRAME(instance->frame))
+    {
+        g_critical(FAILED_MALLOC_CHANNEL_CONTROL);
+        g_free(instance);
+        return NULL;
+    }
+    gtk_style_context_add_class(gtk_widget_get_style_context(instance->frame), "channel-box");
 
     instance->control_channel_vertical_bar = GTK_VB(gtk_vb_new());
 
@@ -126,117 +201,84 @@ RPIChannelControl *new_rpi_channel_control(gint channel_id)
         return NULL;
     }
 
+    gtk_widget_set_size_request(
+        GTK_WIDGET(instance->control_channel_spinner_button),
+        90,
+        30
+    );
+
     gchar tooltip_text_spinner[23] = {0};
     g_snprintf(tooltip_text_spinner, sizeof(tooltip_text_spinner), "Set level at channel %d", channel_id);
     gtk_widget_set_tooltip_text(GTK_WIDGET(instance->control_channel_spinner_button), tooltip_text_spinner);
-    gchar text_check_box[7] = {0};
-    g_snprintf(text_check_box, sizeof(text_check_box), "GPIO %d", channel_id);
-    instance->control_channel_gpio_check_box = gtk_check_button_new_with_label(text_check_box);
+    gchar text_check_box[16] = {0};
+    g_snprintf(text_check_box, sizeof(text_check_box), "Channel %d", channel_id);
+    instance->control_channel_check_box = gtk_check_button_new_with_label(text_check_box);
 
-    if (!GTK_IS_CHECK_BUTTON(instance->control_channel_gpio_check_box))
+    if (!GTK_IS_CHECK_BUTTON(instance->control_channel_check_box))
     {
         g_critical(FAILED_MALLOC_CHANNEL_CONTROL);
         destroy_rpi_channel_control(instance);
         return NULL;
     }
 
-    gchar tooltip_text_check_box[14] = {0};
-    g_snprintf(tooltip_text_check_box, sizeof(tooltip_text_check_box), "Active GPIO %d", channel_id);
-    gtk_widget_set_tooltip_text(GTK_WIDGET(instance->control_channel_gpio_check_box), tooltip_text_check_box);
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(instance->control_channel_gpio_check_box), FALSE);
+    gchar tooltip_text_check_box[24] = {0};
+    g_snprintf(tooltip_text_check_box, sizeof(tooltip_text_check_box), "Activate Channel %d", channel_id);
+    gtk_widget_set_tooltip_text(GTK_WIDGET(instance->control_channel_check_box), tooltip_text_check_box);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(instance->control_channel_check_box), FALSE);
+    gtk_widget_set_sensitive(instance->control_channel_scale, FALSE);
+    gtk_widget_set_sensitive(instance->control_channel_spinner_button, FALSE);
+
+    g_signal_connect(
+        G_OBJECT(instance->control_channel_check_box),
+        "toggled",
+        G_CALLBACK(on_channel_check_box_toggled),
+        instance
+    );
+    g_signal_connect(
+        G_OBJECT(instance->control_channel_scale),
+        "value-changed",
+        G_CALLBACK(on_scale_value_changed),
+        instance
+    );
+    g_signal_connect(
+        G_OBJECT(instance->control_channel_spinner_button),
+        "value-changed",
+        G_CALLBACK(on_spinner_value_changed),
+        instance
+    );
+
+    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+    gtk_container_set_border_width(GTK_CONTAINER(vbox), 4);
+    gtk_container_add(GTK_CONTAINER(instance->frame), vbox);
+
+    GtkWidget *hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
+    gtk_widget_set_halign(hbox, GTK_ALIGN_CENTER);
+    gtk_box_pack_start(GTK_BOX(hbox), GTK_WIDGET(instance->control_channel_vertical_bar), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(hbox), GTK_WIDGET(instance->control_channel_scale), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
+
+    gtk_widget_set_halign(instance->control_channel_check_box, GTK_ALIGN_CENTER);
+    gtk_box_pack_start(GTK_BOX(vbox), instance->control_channel_check_box, FALSE, FALSE, 0);
+
+    gtk_widget_set_halign(instance->control_channel_spinner_button, GTK_ALIGN_CENTER);
+    gtk_box_pack_start(GTK_BOX(vbox), instance->control_channel_spinner_button, FALSE, FALSE, 0);
 
     return instance;
 }
 
 void show_rpi_channel_control(RPIChannelControl *instance)
 {
-    if (instance)
+    if (instance && GTK_IS_FRAME(instance->frame))
     {
-        gboolean is_vertical_bar = GTK_IS_VB(instance->control_channel_vertical_bar);
-        gboolean is_vertical_bar_visible = rpi_is_widget_visible_misc(GTK_WIDGET(instance->control_channel_vertical_bar));
-        
-        if (is_vertical_bar && !is_vertical_bar_visible)
-        {
-            rpi_set_visible_widget_misc(GTK_WIDGET(instance->control_channel_vertical_bar), !is_vertical_bar_visible);
-        }
-
-        gboolean is_scale = GTK_IS_SCALE(instance->control_channel_scale);
-        gboolean is_scale_visible = rpi_is_widget_visible_misc(GTK_WIDGET(instance->control_channel_scale));
-
-        if (is_scale && !is_scale_visible)
-        {
-            rpi_set_visible_widget_misc(GTK_WIDGET(instance->control_channel_scale), !is_scale_visible);
-        }
-
-        gboolean is_adjustment = GTK_IS_ADJUSTMENT(instance->control_channel_spinner_adjustment);
-        gboolean is_adjustment_visible = rpi_is_widget_visible_misc(GTK_WIDGET(instance->control_channel_spinner_adjustment));
-
-        if (is_adjustment && !is_adjustment_visible)
-        {
-            rpi_set_visible_widget_misc(GTK_WIDGET(instance->control_channel_spinner_adjustment), !is_adjustment_visible);
-        }
-
-        gboolean is_spin_button = GTK_IS_SPIN_BUTTON(instance->control_channel_spinner_button);
-        gboolean is_spin_button_visible = rpi_is_widget_visible_misc(GTK_WIDGET(instance->control_channel_spinner_button));
-
-        if (is_spin_button && !is_spin_button_visible)
-        {
-            rpi_set_visible_widget_misc(GTK_WIDGET(instance->control_channel_spinner_button), !is_spin_button_visible);
-        }
-
-        gboolean is_check_button = GTK_IS_CHECK_BUTTON(instance->control_channel_gpio_check_box);
-        gboolean is_check_button_visible = rpi_is_widget_visible_misc(GTK_WIDGET(instance->control_channel_gpio_check_box));
-
-        if (is_check_button && !is_check_button_visible)
-        {
-            rpi_set_visible_widget_misc(GTK_WIDGET(instance->control_channel_gpio_check_box), !is_check_button_visible);
-        }
+        gtk_widget_show_all(instance->frame);
     }
 }
 
 void hide_rpi_channel_control(RPIChannelControl *instance)
 {
-    if (instance)
+    if (instance && GTK_IS_FRAME(instance->frame))
     {
-        gboolean is_vertical_bar = GTK_IS_VB(instance->control_channel_vertical_bar);
-        gboolean is_vertical_bar_visible = rpi_is_widget_visible_misc(GTK_WIDGET(instance->control_channel_vertical_bar));
-        
-        if (is_vertical_bar && is_vertical_bar_visible)
-        {
-            rpi_set_visible_widget_misc(GTK_WIDGET(instance->control_channel_vertical_bar), !is_vertical_bar_visible);
-        }
-
-        gboolean is_scale = GTK_IS_SCALE(instance->control_channel_scale);
-        gboolean is_scale_visible = rpi_is_widget_visible_misc(GTK_WIDGET(instance->control_channel_scale));
-
-        if (is_scale && is_scale_visible)
-        {
-            rpi_set_visible_widget_misc(GTK_WIDGET(instance->control_channel_scale), !is_scale_visible);
-        }
-
-        gboolean is_adjustment = GTK_IS_ADJUSTMENT(instance->control_channel_spinner_adjustment);
-        gboolean is_adjustment_visible = rpi_is_widget_visible_misc(GTK_WIDGET(instance->control_channel_spinner_adjustment));
-
-        if (is_adjustment && is_adjustment_visible)
-        {
-            rpi_set_visible_widget_misc(GTK_WIDGET(instance->control_channel_spinner_adjustment), !is_adjustment_visible);
-        }
-
-        gboolean is_spin_button = GTK_IS_SPIN_BUTTON(instance->control_channel_spinner_button);
-        gboolean is_spin_button_visible = rpi_is_widget_visible_misc(GTK_WIDGET(instance->control_channel_spinner_button));
-
-        if (is_spin_button && is_spin_button_visible)
-        {
-            rpi_set_visible_widget_misc(GTK_WIDGET(instance->control_channel_spinner_button), !is_spin_button_visible);
-        }
-
-        gboolean is_check_button = GTK_IS_CHECK_BUTTON(instance->control_channel_gpio_check_box);
-        gboolean is_check_button_visible = rpi_is_widget_visible_misc(GTK_WIDGET(instance->control_channel_gpio_check_box));
-
-        if (is_check_button && is_check_button_visible)
-        {
-            rpi_set_visible_widget_misc(GTK_WIDGET(instance->control_channel_gpio_check_box), !is_check_button_visible);
-        }
+        gtk_widget_hide(instance->frame);
     }
 }
 
@@ -274,9 +316,9 @@ GtkWidget* get_spinner_button_from_rpi_channel_control(RPIChannelControl *instan
 {
     if (instance)
     {
-        gboolean is_spinner_button = GTK_IS_SPIN_BUTTON(instance->control_channel_spinner_button);
+        gboolean is_spinner = GTK_IS_SPIN_BUTTON(instance->control_channel_spinner_button);
 
-        if (is_spinner_button)
+        if (is_spinner)
         {
             return instance->control_channel_spinner_button;
         }
@@ -289,12 +331,22 @@ GtkWidget* get_check_box_from_rpi_channel_control(RPIChannelControl *instance)
 {
     if (instance)
     {
-        gboolean is_check_box = GTK_IS_CHECK_BUTTON(instance->control_channel_gpio_check_box);
+        gboolean is_check_box = GTK_IS_CHECK_BUTTON(instance->control_channel_check_box);
 
         if (is_check_box)
         {
-            return instance->control_channel_gpio_check_box;
+            return instance->control_channel_check_box;
         }
+    }
+
+    return NULL;
+}
+
+GtkWidget* get_frame_from_rpi_channel_control(RPIChannelControl *instance)
+{
+    if (instance && GTK_IS_FRAME(instance->frame))
+    {
+        return instance->frame;
     }
 
     return NULL;
@@ -304,35 +356,17 @@ void destroy_rpi_channel_control(RPIChannelControl *instance)
 {
     if (instance)
     {
-        if (GTK_IS_VB(instance->control_channel_vertical_bar))
+        if (GTK_IS_FRAME(instance->frame))
         {
-            gtk_vb_destroy(instance->control_channel_vertical_bar);
-            instance->control_channel_vertical_bar = NULL;
+            rpi_destroy_widget_misc(instance->frame);
+            instance->frame = NULL;
         }
 
-        if (GTK_IS_SCALE(instance->control_channel_scale))
-        {
-            rpi_destroy_widget_misc(GTK_WIDGET(instance->control_channel_scale));
-            instance->control_channel_scale = NULL;
-        }
-
-        if (GTK_IS_ADJUSTMENT(instance->control_channel_spinner_adjustment))
-        {
-            rpi_destroy_widget_misc(GTK_WIDGET(instance->control_channel_spinner_adjustment));
-            instance->control_channel_spinner_adjustment = NULL;
-        }
-        
-        if (GTK_IS_SPIN_BUTTON(instance->control_channel_spinner_button))
-        {
-            rpi_destroy_widget_misc(GTK_WIDGET(instance->control_channel_spinner_button));
-            instance->control_channel_spinner_button = NULL;
-        }
-
-        if (GTK_IS_CHECK_BUTTON(instance->control_channel_gpio_check_box))
-        {
-            rpi_destroy_widget_misc(GTK_WIDGET(instance->control_channel_gpio_check_box));
-            instance->control_channel_gpio_check_box = NULL;
-        }
+        instance->control_channel_vertical_bar = NULL;
+        instance->control_channel_scale = NULL;
+        instance->control_channel_spinner_adjustment = NULL;
+        instance->control_channel_spinner_button = NULL;
+        instance->control_channel_check_box = NULL;
 
         g_free(instance);
     }

@@ -37,8 +37,8 @@
 
 static const gchar* TITLE_WINDOW_RPI_HOME = "RPIClient v1.0";
 static const gchar* LOGO_RPI_HOME = "icon.png";
-static const gint WIDTH_WINDOW_RPI_HOME = 900;
-static const gint HEIGHT_WINDOW_RPI_HOME = 400;
+static const gint WIDTH_WINDOW_RPI_HOME = 1200;
+static const gint HEIGHT_WINDOW_RPI_HOME = 640;
 static const gint CONTAINER_BORDER_WIDTH_WINDOW_RPI_HOME = 2;
 static const gint VERTICAL_BOX_SPACING_WINDOW_RPI_HOME = 0;
 
@@ -213,6 +213,14 @@ RPIMenu* get_menu_bar_from_rpi_home(RPIHome *instance)
     }
 
     return NULL;
+}
+
+void rpi_home_update_channel_status(RPIHome *instance, gint channel_id, gint value)
+{
+    if (instance && instance->frame_home)
+    {
+        rpi_home_frame_update_channel_status(instance->frame_home, channel_id, value);
+    }
 }
 
 void destroy_rpi_home(RPIHome *instance)
