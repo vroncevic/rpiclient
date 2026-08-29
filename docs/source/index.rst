@@ -187,6 +187,9 @@ Contributing
 Copyright and Licence
 ---------------------
 
+.. image:: https://raw.githubusercontent.com/vroncevic/rpiclient/master/docs/foundations.png
+   :alt: Foundations
+
 Copyright (c) 2016 - 2026 Vladimir Roncevic <elektron.ronca@gmail.com>
 
 rpiclient is free software: you can redistribute it and/or modify it
