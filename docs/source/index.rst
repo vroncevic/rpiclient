@@ -14,19 +14,19 @@ Developed in modern **C** code with native support for both **GTK+ 3.0** and **G
 
    self
 
-|Build Status| |Lines Status| |GitHub issues| |Documentation Status| |GitHub contributors|
+|Build Status| |C Checker| |Documentation Status| |GitHub issues| |GitHub contributors|
 
-.. |Build Status| image:: https://github.com/vroncevic/rpiclient/actions/workflows/rpiclient_c_checker.yml/badge.svg
+.. |Build Status| image:: https://github.com/vroncevic/rpiclient/actions/workflows/rpiclient_build_checker.yml/badge.svg
+   :target: https://github.com/vroncevic/rpiclient/actions/workflows/rpiclient_build_checker.yml
+
+.. |C Checker| image:: https://github.com/vroncevic/rpiclient/actions/workflows/rpiclient_c_checker.yml/badge.svg
    :target: https://github.com/vroncevic/rpiclient/actions/workflows/rpiclient_c_checker.yml
-
-.. |Lines Status| image:: https://github.com/vroncevic/rpiclient/actions/workflows/rpiclient_lines_checker.yml/badge.svg
-   :target: https://github.com/vroncevic/rpiclient/actions/workflows/rpiclient_lines_checker.yml
-
-.. |GitHub issues| image:: https://img.shields.io/github/issues/vroncevic/rpiclient.svg
-   :target: https://github.com/vroncevic/rpiclient/issues
 
 .. |Documentation Status| image:: https://readthedocs.org/projects/rpi-client-gtk/badge/?version=master
    :target: https://rpi-client-gtk.readthedocs.io/?badge=master
+
+.. |GitHub issues| image:: https://img.shields.io/github/issues/vroncevic/rpiclient.svg
+   :target: https://github.com/vroncevic/rpiclient/issues
 
 .. |GitHub contributors| image:: https://img.shields.io/github/contributors/vroncevic/rpiclient.svg
    :target: https://github.com/vroncevic/rpiclient/graphs/contributors
