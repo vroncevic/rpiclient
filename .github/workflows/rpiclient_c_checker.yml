@@ -1,0 +1,40 @@
+name: rpiclient_c_checker
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'rpiclient/src/**/*.c'
+      - '.github/workflows/rpiclient_c_checker.yml'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'rpiclient/src/**/*.c'
+      - '.github/workflows/rpiclient_c_checker.yml'
+
+jobs:
+  validate_module_lines:
+    name: Validate C Modules <= 500 Lines
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Check Module Line Limits
+        run: |
+          echo "Verifying that no C source module exceeds 500 lines..."
+          FAILED=0
+          for file in $(find rpiclient/src -name "*.c" -not -name "rpi_resources.c" | sort); do
+            LINES=$(wc -l < "$file")
+            if [ "$LINES" -gt 500 ]; then
+              echo "::error file=$file::Module $file exceeds 500 lines ($LINES lines)"
+              FAILED=1
+            else
+              echo "OK ($LINES lines): $file"
+            fi
+          done
+          if [ $FAILED -ne 0 ]; then
+            echo "Line limit check failed! One or more modules exceed 500 lines."
+            exit 1
+          fi
+          echo "All C modules passed line limit validation (<= 500 lines)."

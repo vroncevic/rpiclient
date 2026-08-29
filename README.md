@@ -1,10 +1,10 @@
 # GTK TCP/IP RPI Client
 
-<img align="right" src="https://raw.githubusercontent.com/vroncevic/rpi_client_gtk/refs/heads/master/docs/rpi_client_logo.png" width="25%">
+<img align="right" src="https://raw.githubusercontent.com/vroncevic/rpiclient/refs/heads/master/docs/rpi_client_logo.png" width="25%">
 
-**rpi_client_gtk** is a graphical desktop application designed for real-time monitoring and remote control of Raspberry Pi nodes over TCP/IP networks.
+**rpiclient** is a graphical desktop application designed for real-time monitoring and remote control of Raspberry Pi nodes over TCP/IP networks.
 
-Developed in modern **[C](https://en.wikipedia.org/wiki/C_(programming_language))** with **GTK+ 3.0** and Cairo graphics.
+Developed in modern **[C](https://en.wikipedia.org/wiki/C_(programming_language))** with native support for both **GTK+ 3.0** and **GTK 4.0** and Cairo graphics.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -24,12 +24,15 @@ Developed in modern **[C](https://en.wikipedia.org/wiki/C_(programming_language)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-[![rpi_client_gtk_c_checker](https://github.com/vroncevic/rpi_client_gtk/actions/workflows/rpi_client_gtk_c_checker.yml/badge.svg)](https://github.com/vroncevic/rpi_client_gtk/actions/workflows/rpi_client_gtk_c_checker.yml) [![rpi_client_gtk_lines_checker](https://github.com/vroncevic/rpi_client_gtk/actions/workflows/rpi_client_gtk_lines_checker.yml/badge.svg)](https://github.com/vroncevic/rpi_client_gtk/actions/workflows/rpi_client_gtk_lines_checker.yml) [![GitHub issues open](https://img.shields.io/github/issues/vroncevic/rpi_client_gtk.svg)](https://github.com/vroncevic/rpi_client_gtk/issues) [![GitHub contributors](https://img.shields.io/github/contributors/vroncevic/rpi_client_gtk.svg)](https://github.com/vroncevic/rpi_client_gtk/graphs/contributors)
+[![rpiclient_c_checker](https://github.com/vroncevic/rpiclient/actions/workflows/rpiclient_c_checker.yml/badge.svg)](https://github.com/vroncevic/rpiclient/actions/workflows/rpiclient_c_checker.yml) [![rpiclient_lines_checker](https://github.com/vroncevic/rpiclient/actions/workflows/rpiclient_lines_checker.yml/badge.svg)](https://github.com/vroncevic/rpiclient/actions/workflows/rpiclient_lines_checker.yml) [![GitHub issues open](https://img.shields.io/github/issues/vroncevic/rpiclient.svg)](https://github.com/vroncevic/rpiclient/issues) [![GitHub contributors](https://img.shields.io/github/contributors/vroncevic/rpiclient.svg)](https://github.com/vroncevic/rpiclient/graphs/contributors)
 
 ---
 
 ### Overview & Features
 
+* **Dual GTK Support (GTK 3.0 & GTK 4.0)**:
+  * Fully modular backend architecture targeting either **GTK+ 3.0** or **GTK 4.0** via `./configure --with-gtk=3.0` or `--with-gtk=4.0`.
+  * Native widget hierarchies and signal routing for both toolkits.
 * **8-Channel Real-time Control**:
   * Independent control for 8 channels (Channel 1 – Channel 8).
   * Interactive controls: vertical slider scales, precision spin buttons, and individual activation checkboxes.
@@ -37,6 +40,8 @@ Developed in modern **[C](https://en.wikipedia.org/wiki/C_(programming_language)
 * **8-Channel Real-time Telemetry & Status Monitoring**:
   * Live status feedback panel displaying confirmed states for all 8 channels.
   * Individual channel status gating with real-time numeric and graphical display.
+* **Interactive Help Guide**:
+  * Built-in 5-step interactive help wizard available via **Help ➔ Help** with step-by-step guidance on network configuration, channel control, and monitoring.
 * **Non-blocking Multithreaded Networking**:
   * Background worker thread (`GThread`) for asynchronous TCP socket I/O.
   * Thread-safe UI updates dispatched directly to the GTK main loop via `g_idle_add()`.
@@ -52,15 +57,34 @@ Developed in modern **[C](https://en.wikipedia.org/wiki/C_(programming_language)
 
 ### Installation
 
-![Debian Linux OS](https://raw.githubusercontent.com/vroncevic/rpi_client_gtk/master/docs/debtux.png)
+![Debian Linux OS](https://raw.githubusercontent.com/vroncevic/rpiclient/master/docs/debtux.png)
 
 To build and install the application:
 
-#### Autogeneration
+#### Autogeneration & Configuration
+
+By default, the application is configured to build against **GTK 3.0**:
 
 ```bash
 cd rpiclient
 ./autogen.sh
+```
+
+To configure and compile against **GTK 4.0**:
+
+```bash
+cd rpiclient
+./autogen.sh --with-gtk=4.0
+```
+
+Alternatively, if `configure` has already been generated:
+
+```bash
+# Configure for GTK 3.0 (default)
+./configure --with-gtk=3.0
+
+# Configure for GTK 4.0
+./configure --with-gtk=4.0
 ```
 
 #### Compile
@@ -122,7 +146,8 @@ All communication between the client and server uses line-delimited (`\n`) JSON-
 
 This module requires the following dependencies and libraries:
 
-* [gtk+ 3.0 - docs.gtk.org/gtk3](https://docs.gtk.org/gtk3/)
+* [gtk+ 3.0 - docs.gtk.org/gtk3](https://docs.gtk.org/gtk3/) or [gtk4 - docs.gtk.org/gtk4](https://docs.gtk.org/gtk4/)
+* [glib 2.0 - docs.gtk.org/glib](https://docs.gtk.org/glib/)
 * [sqlite3 - www.sqlite.org](https://www.sqlite.org/)
 * [intltool - launchpad.net/intltool](https://launchpad.net/intltool)
 * [libtool - www.gnu.org/software/libtool](https://www.gnu.org/software/libtool/)
@@ -136,27 +161,35 @@ This module requires the following dependencies and libraries:
 More documentation and info at:
 
 * [rpi-client-gtk.readthedocs.io](https://rpi-client-gtk.readthedocs.io/)
-* [gtk+ - docs.gtk.org/gtk3](https://docs.gtk.org/gtk3/)
+* [gtk+ 3.0 - docs.gtk.org/gtk3](https://docs.gtk.org/gtk3/)
+* [gtk4 - docs.gtk.org/gtk4](https://docs.gtk.org/gtk4/)
 * [sqlite - www.sqlite.org](https://www.sqlite.org/)
 
 ---
 
 ### Contributing
 
-[Contributing to rpi_client_gtk](CONTRIBUTING.md)
+1. Fork it!
+2. Create your feature branch: `git checkout -b my-new-feature`
+3. Commit your changes: `git commit -am 'Add some feature'`
+4. Push to the branch: `git push origin my-new-feature`
+5. Submit a pull request.
 
 ---
 
 ### Copyright and Licence
 
-Copyright (C) 2016 - 2026 by https://github.com/vroncevic/rpi_client_gtk
+Copyright (c) 2016 - 2026 Vladimir Roncevic <elektron.ronca@gmail.com>
 
-**rpiclient** is free software; you can redistribute it and/or modify it.
+rpiclient is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-Lets help and support Raspberry PI && GNOME.
+rpiclient is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+See the GNU General Public License for more details.
 
-<p align="center">
-  <a href="https://www.raspberrypi.org/donate/">
-    <img src="https://raw.githubusercontent.com/vroncevic/rpi_client_gtk/refs/heads/master/docs/foundations.png">
-  </a>
-</p>
+You should have received a copy of the GNU General Public License along
+with this program. If not, see <http://www.gnu.org/licenses/>.

@@ -18,7 +18,23 @@ GLIB_GNU_GETTEXT
 AM_PROG_LIBTOOL
 LT_INIT
 
-PKG_CHECK_MODULES([GTK], [gtk+-3.0])
+AC_ARG_WITH([gtk],
+  [AS_HELP_STRING([--with-gtk=3.0|4.0], [which GTK+ version to compile against (default: 3.0)])],
+  [case "$with_gtk" in
+     3.0|4.0) ;;
+     *) AC_MSG_ERROR([invalid GTK version specified: $with_gtk]) ;;
+   esac],
+  [with_gtk=3.0])
+
+AS_IF([test "x$with_gtk" = "x3.0"], [
+  PKG_CHECK_MODULES([GTK], [gtk+-3.0])
+], [
+  PKG_CHECK_MODULES([GTK], [gtk4])
+])
+
+AM_CONDITIONAL([USE_GTK3], [test "x$with_gtk" = "x3.0"])
+AM_CONDITIONAL([USE_GTK4], [test "x$with_gtk" = "x4.0"])
+
 AC_SUBST([GTK_CFLAGS])
 AC_SUBST([GTK_LIBS])
 

@@ -1,6 +1,5 @@
 CompileFlags:
   Add:
-    - -I/usr/include/gtk-3.0
     - -I/usr/include/pango-1.0
     - -I/usr/include/glib-2.0
     - -I/usr/lib/x86_64-linux-gnu/glib-2.0/include
@@ -15,10 +14,27 @@ CompileFlags:
     - -I/usr/include/gdk-pixbuf-2.0
     - -I/usr/include/x86_64-linux-gnu
     - -I/usr/include/webp
+    - -pthread
+    - -Wno-pedantic
+
+---
+If:
+  PathMatch: .*_gtk4\.[ch]
+CompileFlags:
+  Add:
+    - -I/usr/include/gtk-4.0
+    - -I/usr/include/graphene-1.0
+    - -I/usr/lib/x86_64-linux-gnu/graphene-1.0/include
+
+---
+If:
+  PathExclude: .*_gtk4\.[ch]
+CompileFlags:
+  Add:
+    - -I/usr/include/gtk-3.0
     - -I/usr/include/gio-unix-2.0
     - -I/usr/include/atk-1.0
     - -I/usr/include/at-spi2-atk/2.0
     - -I/usr/include/at-spi-2.0
     - -I/usr/include/dbus-1.0
     - -I/usr/lib/x86_64-linux-gnu/dbus-1.0/include
-    - -pthread
