@@ -179,6 +179,8 @@ More documentation and info at:
 
 ### Copyright and Licence
 
+![Foundations](https://raw.githubusercontent.com/vroncevic/rpiclient/master/docs/foundations.png)
+
 Copyright (c) 2016 - 2026 Vladimir Roncevic <elektron.ronca@gmail.com>
 
 rpiclient is free software: you can redistribute it and/or modify it
