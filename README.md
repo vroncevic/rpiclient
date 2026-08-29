@@ -24,7 +24,7 @@ Developed in modern **[C](https://en.wikipedia.org/wiki/C_(programming_language)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-[![rpiclient_c_checker](https://github.com/vroncevic/rpiclient/actions/workflows/rpiclient_c_checker.yml/badge.svg)](https://github.com/vroncevic/rpiclient/actions/workflows/rpiclient_c_checker.yml) [![rpiclient_lines_checker](https://github.com/vroncevic/rpiclient/actions/workflows/rpiclient_lines_checker.yml/badge.svg)](https://github.com/vroncevic/rpiclient/actions/workflows/rpiclient_lines_checker.yml) [![GitHub issues open](https://img.shields.io/github/issues/vroncevic/rpiclient.svg)](https://github.com/vroncevic/rpiclient/issues) [![GitHub contributors](https://img.shields.io/github/contributors/vroncevic/rpiclient.svg)](https://github.com/vroncevic/rpiclient/graphs/contributors)
+[![rpiclient_build_checker](https://github.com/vroncevic/rpiclient/actions/workflows/rpiclient_build_checker.yml/badge.svg)](https://github.com/vroncevic/rpiclient/actions/workflows/rpiclient_build_checker.yml) [![rpiclient_c_checker](https://github.com/vroncevic/rpiclient/actions/workflows/rpiclient_c_checker.yml/badge.svg)](https://github.com/vroncevic/rpiclient/actions/workflows/rpiclient_c_checker.yml) [![Documentation Status](https://readthedocs.org/projects/rpi-client-gtk/badge/?version=master)](https://rpi-client-gtk.readthedocs.io/?badge=master) [![GitHub issues open](https://img.shields.io/github/issues/vroncevic/rpiclient.svg)](https://github.com/vroncevic/rpiclient/issues) [![GitHub contributors](https://img.shields.io/github/contributors/vroncevic/rpiclient.svg)](https://github.com/vroncevic/rpiclient/graphs/contributors)
 
 ---
 
